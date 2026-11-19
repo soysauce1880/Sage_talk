@@ -56,6 +56,29 @@ textarea{flex:1;border:none;resize:none;font-size:16px;padding:8px;max-height:10
 .plist div{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eee;cursor:pointer}
 .plist p{font-size:12px;color:#666}
 .badge{font-size:11px;padding:3px 8px;border-radius:10px;background:#eee;margin-left:6px}
+
+/* ===== 반응형: 폴드 펼침·태블릿 (600px 이상) ===== */
+body{background:#b2c7d9}
+#app{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto auto;
+  grid-template-areas:"header" "modebar" "chat" "hint" "footer"}
+header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-height:0} .hint{grid-area:hint} footer{grid-area:footer}
+@media (min-width:600px){
+  #app{max-width:none;grid-template-columns:minmax(220px,30%) 1fr;grid-template-rows:auto 1fr auto auto;
+    grid-template-areas:"modebar header" "modebar chat" "modebar hint" "modebar footer"}
+  #modebar{flex-direction:column;overflow-y:auto;overflow-x:hidden;gap:4px;padding:calc(12px + env(safe-area-inset-top)) 10px 12px;
+    background:#fff;border-top:none;border-right:1px solid #d5dde5}
+  #modebar::before{content:"대화방";font-weight:700;font-size:15px;padding:4px 8px 8px}
+  #modebar button{text-align:left;font-size:15px;padding:12px 14px;border-radius:10px;background:transparent}
+  #modebar button:hover{background:#f2f4f6}
+  #modebar button.on{background:#fff7b8;color:#222;font-weight:600}
+  #modebar button.add{background:#3c1e1e;color:#fff;margin-top:6px}
+  #backBtn{visibility:hidden}
+  #app{padding-top:0} header{padding-top:calc(10px + env(safe-area-inset-top))}
+  .bubble{max-width:62%;font-size:15px}
+  .sage .body{max-width:66%}
+  #chat{padding:14px 24px 20px}
+  .card{max-width:520px}
+}
 </style>
 </head>
 <body>
