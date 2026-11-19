@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>성현 상담톡</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:#ddd;display:flex;justify-content:center;height:100vh}
+#app{width:100%;max-width:440px;height:100vh;display:flex;flex-direction:column;background:#b2c7d9;position:relative;overflow:hidden}
+header{background:#a9bdce;padding:10px 12px;display:flex;align-items:center;gap:10px}
+header button{background:none;border:none;font-size:20px;cursor:pointer;color:#222}
+header .title{flex:1;font-weight:600;font-size:16px}
+header .title small{color:#555;font-weight:400;margin-left:4px}
+#modebar{display:flex;gap:6px;padding:6px 10px;background:#a9bdce;border-top:1px solid #9db2c4;overflow-x:auto}
+#modebar button{border:none;border-radius:14px;padding:5px 10px;font-size:12px;background:#fff;cursor:pointer;white-space:nowrap}
+#modebar button.on{background:#3c1e1e;color:#fee500}
+#chat{flex:1;overflow-y:auto;padding:10px 10px 16px}
+.date{text-align:center;margin:10px 0}
+.date span{background:rgba(0,0,0,.15);color:#fff;font-size:11px;padding:4px 12px;border-radius:12px}
+.row{display:flex;margin:6px 0;align-items:flex-end;gap:5px}
+.row.me{justify-content:flex-end}
+.bubble{max-width:72%;padding:8px 11px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.me .bubble{background:#fee500;border-top-right-radius:3px}
+.sage{align-items:flex-start}
+.avatar{width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0}
+.sage .body{display:flex;flex-direction:column;max-width:78%}
+.sage .name{font-size:12px;color:#333;margin-bottom:3px}
+.tag{font-size:10px;background:rgba(255,255,255,.6);border-radius:6px;padding:1px 5px;margin-left:4px;color:#555}
+.sage .bubble{background:#fff;border-top-left-radius:3px;max-width:100%}
+.time{font-size:10px;color:#555;white-space:nowrap}
+.typing .bubble{color:#999;letter-spacing:3px}
+footer{background:#fff;display:flex;padding:8px;gap:6px;align-items:flex-end}
+textarea{flex:1;border:none;resize:none;font-size:14px;padding:8px;max-height:100px;outline:none;font-family:inherit}
+#send{background:#fee500;border:none;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+#send:disabled{opacity:.5}
+.hint{font-size:11px;color:#888;padding:0 10px 6px;background:#fff}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9}
+.modal.show{display:flex}
+.card{background:#fff;border-radius:14px;width:88%;max-height:80%;overflow-y:auto;padding:18px}
+.card h3{margin-bottom:10px}
+.card label{display:block;font-size:13px;margin:10px 0 4px}
+.card input,.card select{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px}
+.card .btns{display:flex;gap:6px;margin-top:14px}
+.card .btns button{flex:1;padding:9px;border:none;border-radius:8px;cursor:pointer;background:#eee}
+.card .btns .pri{background:#fee500;font-weight:600}
+.plist div{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #eee;cursor:pointer}
+.plist p{font-size:12px;color:#666}
+.badge{font-size:11px;padding:3px 8px;border-radius:10px;background:#eee;margin-left:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="backBtn" title="단톡방으로">‹</button>
+    <div class="title" id="roomTitle">성현 단톡방<small id="memberCnt"></small></div>
+    <button id="peopleBtn" title="성현 프로필">👥</button>
+    <button id="menuBtn" title="설정">☰</button>
+  </header>
+  <div id="modebar"></div>
+  <div id="chat"></div>
+  <div class="hint">팁: 괄호 () 안에 상황·감정·배경을 적으면 조언에 반영돼요. 예) 회의 때 말을 못 하겠어요 (신입이고 팀장님이 무서움)</div>
+  <footer>
+    <textarea id="input" rows="1" placeholder="고민을 입력하세요"></textarea>
+    <button id="send">전송</button>
+  </footer>
+
+  <div class="modal" id="settingsModal"><div class="card">
+    <h3>설정</h3>
+    <label>AI 제공자</label>
+    <select id="provider"><option value="demo">데모 (API 키 없이)</option><option value="anthropic">Anthropic Claude</option><option value="openai">OpenAI</option></select>
+    <label>API 키 (이 브라우저 localStorage에만 저장)</label>
+    <input id="apiKey" type="password" placeholder="sk-...">
+    <label>모델명</label>
+    <input id="model" placeholder="claude-sonnet-5-5 / gpt-4o-mini">
+    <div class="btns"><button class="pri" id="saveSet">저장</button><button id="closeSet">닫기</button></div>
+    <div class="btns"><button id="resetChat">현재 대화 초기화</button></div>
+  </div></div>
+
+  <div class="modal" id="peopleModal"><div class="card">
+    <h3>성현·철학자 프로필</h3>
+    <div class="plist" id="plist"></div>
+    <div class="btns"><button id="closePeople">닫기</button></div>
+  </div></div>
+
+  <div class="modal" id="profileModal"><div class="card" id="profileCard"></div></div>
+</div>
+
+<script>
+/* ========== 1. 페르소나 데이터 ========== */
+const SAGES = {
+  laozi:{name:"노자",emoji:"🌊",color:"#cfe8e0",tag:"도가",summary:"무위자연. 억지로 하지 않을 때 일이 저절로 풀린다. 물처럼 낮은 곳으로 흐르되 결국 바위를 뚫는다.",style:"짧고 시적인 문장, 물·바람·골짜기 비유, '~하게나' 같은 느긋한 어조",keys:["번아웃","지침","불안","경쟁","욕심","조급"]},
+  confucius:{name:"공자",emoji:"📜",color:"#f2e2c4",tag:"유가",summary:"인(仁)과 예(禮). 관계 속 내 역할을 바르게 하고, 지나침도 모자람도 없는 중용을 지킨다.",style:"점잖고 단정한 어조, '군자는~' 화법, 일상 태도와 예절의 구체적 예시",keys:["인간관계","직장","상사","가족","눈치","예의"]},
+  buddha:{name:"부처님",emoji:"🪷",color:"#f6d9c8",tag:"불교",summary:"괴로움의 뿌리는 집착. 마음을 알아차리고 관조하면 괴로움이 옅어진다.",style:"따뜻하고 자비로운 어조, '벗이여', 두 번째 화살·흙탕물 같은 비유",keys:["불안","분노","이별","상실","집착","미움"]},
+  zhuangzi:{name:"장자",emoji:"🦋",color:"#e0dcf5",tag:"도가",summary:"나비 꿈. 쓸모없음의 쓸모. 고정관념을 깨면 세상이 훨씬 넓어진다.",style:"해학적이고 장난스러운 어조, 역설과 우화, 큰 새·우물 안 개구리 비유",keys:["비교","눈치","실패","쓸모","진로","고정관념"]},
+  socrates:{name:"소크라테스",emoji:"🏛️",color:"#dbe6f3",tag:"그리스",summary:"너 자신을 알라. 질문으로 전제를 검토하며 본질에 다가간다.",style:"차분한 질문을 2~3개 던짐, '자네는 그것을 어떻게 아는가?' 화법",keys:["확신","결정","진로","오해","판단","자존감"]},
+  epictetus:{name:"에픽테토스",emoji:"⛓️",color:"#e5e5e5",tag:"스토아",summary:"통제할 수 있는 것과 없는 것을 구분하라. 사건이 아니라 사건에 대한 판단이 우리를 괴롭힌다.",style:"단호하지만 담백한 어조, 노예 출신다운 현실적 예시",keys:["불안","통제","눈치","평판","걱정","분노"]},
+  seneca:{name:"세네카",emoji:"🖋️",color:"#e8dfd3",tag:"스토아",summary:"시간은 가장 귀한 재산. 우리는 실제보다 상상 속에서 더 많이 괴로워한다.",style:"편지처럼 다정한 어조, '루킬리우스에게 쓰듯' 조언, 시간·하루 단위 실천",keys:["번아웃","시간","걱정","바쁨","미래","불안"]},
+  nietzsche:{name:"니체",emoji:"⚡",color:"#f3d6d6",tag:"실존",summary:"타인의 잣대가 아닌 나만의 가치를 창조하라. 너 자신이 되어라. 운명을 사랑하라.",style:"강렬하고 선언적인 어조, 낙타·사자·아이 비유, 짧은 아포리즘",keys:["자존감","비교","눈치","실패","열등감","진로"]},
+  camus:{name:"카뮈·사르트르",emoji:"🪨",color:"#d9e9d2",tag:"실존",summary:"세상은 부조리하지만 의미는 내가 선택해 만든다. 시지프는 행복하다고 상상해야 한다.",style:"담담하고 솔직한 어조, 시지프의 바위·카페 웨이터 예시, 선택과 책임 강조",keys:["의미","진로","결정","허무","불확실","번아웃"]}
+};
+const IDS = Object.keys(SAGES);
+
+/* ========== 2. 상태 & 저장 ========== */
+const LS = k => "sagetalk_"+k;
+let settings = JSON.parse(localStorage.getItem(LS("settings"))||'{"provider":"demo","apiKey":"","model":""}');
+let room = "group"; // "group" or sage id
+let histories = JSON.parse(localStorage.getItem(LS("hist"))||"{}");
+const save = () => localStorage.setItem(LS("hist"), JSON.stringify(histories));
+const hist = () => (histories[room] ||= []);
+
+/* ========== 3. 괄호 맥락 파싱 ========== */
+function parseInput(text){
+  const ctx = [...text.matchAll(/\(([^)]*)\)/g)].map(m=>m[1].trim()).filter(Boolean);
+  const main = text.replace(/\([^)]*\)/g,"").trim();
+  return {main, ctx};
+}
+
+/* ========== 4. 성현 선택 (단톡방) ========== */
+function pickSages(text){
+  const scored = IDS.map(id=>({id,s:SAGES[id].keys.filter(k=>text.includes(k)).length+Math.random()*0.5}));
+  scored.sort((a,b)=>b.s-a.s);
+  const n = 2 + Math.floor(Math.random()*3); // 2~4명
+  return scored.slice(0,n).map(x=>x.id);
+}
+
+/* ========== 5. 데모 폴백 응답 ========== */
+const TOPICS = {
+  눈치:["눈치","눈칫","시선","평가","어색"], 불안:["불안","걱정","초조","무서","두려"],
+  인간관계:["관계","친구","상사","동료","가족","연인","싸웠","서운"], 번아웃:["번아웃","지쳐","지침","피곤","힘들","의욕"],
+  진로:["진로","이직","퇴사","취업","꿈","선택"]
+};
+const DEMO = {
+  laozi:{눈치:"물은 그릇 모양을 탓하지 않네. 남의 눈빛을 다 담으려 애쓰면 그릇이 깨지지. 오늘은 한 번쯤 '그냥 그런가 보다' 하고 흘려보내 보게나.",불안:"흙탕물은 휘저을수록 흐려지지. 가만히 두면 저절로 맑아진다네. 불안도 붙잡지 말고 잠시 가라앉게 두게.",인간관계:"강과 바다가 온갖 물을 받는 건 낮은 곳에 있기 때문이네. 먼저 이기려 하지 말고 한 걸음 낮춰 보게.",번아웃:"활을 끝까지 당기면 줄이 끊어지네. 지금 자네에게 필요한 건 더 당기는 게 아니라 손을 놓는 일이라네.",진로:"길은 걸어서 생기는 것이지. 지도부터 완벽히 그리려 하지 말고, 발이 가는 쪽으로 한 걸음 디뎌 보게.",기본:"억지로 풀려 할수록 매듭은 조여지네. 힘을 빼고 물처럼 상황을 따라가 보게나."},
+  confucius:{눈치:"군자는 남이 나를 알아주지 않음을 걱정하지 않고, 내가 남을 알지 못함을 걱정한다네. 눈치 대신 예를 갖추되, 그 이상은 상대의 몫이네.",불안:"멀리 내다보는 근심이 없으면 가까운 걱정이 생기지. 걱정을 오늘 할 일 하나로 바꿔 적어 보게.",인간관계:"내가 원하지 않는 것을 남에게 하지 말게. 서운함이 있다면 상대를 탓하기 전 내 역할부터 한 번 돌아보세. 그다음 정중히 말하면 되네.",번아웃:"지나침은 모자람과 같네. 일에도 절도가 있어야 오래가지. 퇴근 시간을 하나의 예(禮)로 지켜 보게.",진로:"아는 자는 좋아하는 자만 못하고, 좋아하는 자는 즐기는 자만 못하다네. 자네가 즐겁게 오래 할 수 있는 일이 무엇인가?",기본:"배우고 때때로 익히면 기쁘지 않은가. 작은 실천 하나를 정해 꾸준히 해 보게."},
+  buddha:{눈치:"벗이여, 남의 생각은 남의 마음에서 일어나는 구름입니다. 그 구름을 내 하늘에 옮겨 담지 마세요.",불안:"첫 번째 화살은 일어난 일이고, 두 번째 화살은 그 일에 대한 내 걱정입니다. 두 번째 화살은 스스로 쏘지 않을 수 있어요. 지금 숨 세 번만 천천히 알아차려 보세요.",인간관계:"분노를 품는 것은 남에게 던지려고 뜨거운 숯을 쥐는 것과 같아요. 먼저 데이는 건 내 손이랍니다.",번아웃:"줄이 너무 팽팽하면 끊어지고 너무 느슨하면 소리가 나지 않지요. 지금은 줄을 조금 풀 때입니다.",진로:"강을 건넌 뒤에는 뗏목을 내려놓습니다. 예전 선택에 매여 있지 말고 지금 이 자리의 마음을 보세요.",기본:"괴로움은 '이래야만 한다'는 집착에서 자랍니다. 그 마음을 가만히 바라보는 것부터 시작해요."},
+  zhuangzi:{눈치:"하하, 우물 안 개구리가 하늘이 동전만 하다고 우기는 꼴일세! 자네를 보는 몇 사람의 눈이 세상 전부는 아니라네.",불안:"내가 나비 꿈을 꾸었는지 나비가 내 꿈을 꾸었는지 모르겠더군. 그러니 지금 걱정이 진짜인지도 너무 믿지 말게나.",인간관계:"바닷새에게 궁중 음악과 고기를 대접했더니 사흘 만에 죽었다지. 내 방식의 친절이 상대에겐 고문일 수도 있네!",번아웃:"쓸모없는 나무가 도끼를 피해 천 년을 산다네. 가끔은 쓸모없어지는 것이 자네를 살리는 길이야.",진로:"붕새는 구만 리를 날아야 남쪽 바다에 닿네. 참새가 비웃어도 상관없지. 자네의 크기로 날게!",기본:"자네가 붙잡은 그 정답, 뒤집어 보면 꽤 웃기지 않나? 한 발짝 물러나 크게 웃어 보게."},
+  socrates:{눈치:"자네는 그들이 자네를 나쁘게 본다고 어떻게 아는가? 그건 그들이 한 말인가, 자네의 추측인가?",불안:"자네가 두려워하는 일이 실제로 일어날 확률은 얼마라고 보는가? 그리고 일어난다면, 정말 견딜 수 없는 일인가?",인간관계:"좋은 친구란 무엇이라고 생각하나? 그 정의에 비추어 보면 지금 이 관계는 어떠한가? 그리고 자네는 그 정의대로 하고 있나?",번아웃:"자네는 무엇을 위해 그렇게 애쓰는가? 그 목적이 정말 자네가 원하는 것인지 한번 따져 보세.",진로:"'좋은 직업'이라 할 때 자네가 말하는 '좋음'은 무엇인가? 그것부터 함께 정의해 보지.",기본:"나도 답을 모른다네. 다만 함께 물어보세. 자네가 진짜 원하는 것은 무엇인가?"},
+  epictetus:{눈치:"남의 평가는 자네 손에 없다. 자네 손에 있는 건 오늘 자네가 어떻게 행동하느냐뿐이다. 거기에만 힘을 써라.",불안:"종이 두 칸을 그려라. 왼쪽엔 내가 바꿀 수 있는 것, 오른쪽엔 바꿀 수 없는 것. 오른쪽 칸 걱정은 오늘부로 내려놓아라.",인간관계:"누군가 자네를 화나게 했다면, 자네를 화나게 한 건 그 사람이 아니라 자네의 판단이다.",번아웃:"마라톤 선수는 모든 구간을 전력질주하지 않는다. 자네가 조절할 수 있는 페이스부터 정하라.",진로:"결과는 신의 몫, 노력은 자네 몫이다. 활을 잘 쏘는 데 집중하고 과녁에 맞는지는 놓아 두라.",기본:"사건이 아니라 사건에 대한 판단이 자네를 괴롭힌다. 판단을 바꿔 보라."},
+  seneca:{눈치:"친애하는 벗이여, 모든 사람에게 사랑받으려는 사람은 결국 누구에게도 자기 자신으로 남지 못한다네.",불안:"우리는 현실보다 상상 속에서 더 자주 고통받는다네. 오늘 밤, 걱정 목록 중 실제로 일어난 일만 체크해 보게.",인간관계:"화가 났다면 하루만 미루게. 분노의 가장 좋은 치료제는 지연이라네.",번아웃:"인생은 짧지 않네, 다만 우리가 낭비할 뿐이지. 오늘 하루 중 한 시간만이라도 온전히 자네 것으로 지켜 주게.",진로:"어느 항구로 갈지 모르는 배에겐 어떤 바람도 순풍이 아니라네. 먼저 자네의 항구를 정하세.",기본:"오늘을 마지막 날처럼, 그러나 서두르지 않고 살아 보게. 그게 내 조언이라네."},
+  nietzsche:{눈치:"너는 낙타처럼 남의 짐을 지고 있다. 이제 사자가 되어 '아니'라고 말하라! 그다음엔 아이처럼 너만의 놀이를 시작하라.",불안:"너를 죽이지 못하는 것은 너를 더 강하게 만든다. 이 불안은 너의 근육이 자라는 소리다.",인간관계:"무리의 박수 소리에 귀를 기울이지 마라. 너를 진짜로 존중하는 몇 사람이면 충분하다.",번아웃:"남이 정한 성공의 사다리를 오르느라 지쳤는가? 춤출 줄 모르는 별은 태어나지 않는다. 너만의 리듬을 되찾아라.",진로:"왜 살아야 하는지 아는 자는 어떤 상황도 견딘다. 너의 '왜'를 찾아라.",기본:"너 자신이 되어라! 남이 정한 가치가 아니라 네가 창조한 가치로 살아라."},
+  camus:{눈치:"사르트르가 말했지, 타인은 지옥이라고. 하지만 그 시선 속에서도 어떻게 살지는 결국 자네가 고르는 거야.",불안:"세상은 원래 답을 주지 않아. 그게 부조리지. 답이 없다는 걸 받아들이면 오히려 숨이 쉬어진다네.",인간관계:"관계에 정답 매뉴얼은 없어. 자네가 어떤 사람이고 싶은지를 먼저 고르고, 그 선택에 따라 행동해 보게.",번아웃:"시지프는 매일 바위를 굴려. 그래도 나는 그가 행복하다고 상상해야 한다고 썼지. 같은 일상 속에서도 자네만의 의미 한 조각을 찾아보게.",진로:"인간은 자유롭도록 선고받았어. 선택하지 않는 것도 선택이지. 그러니 차라리 자네 손으로 고르게.",기본:"의미는 발견하는 게 아니라 만드는 거야. 오늘 작은 선택 하나로 시작해 보게."}
+};
+function detectTopic(t){for(const [k,ws] of Object.entries(TOPICS)) if(ws.some(w=>t.includes(w))) return k; return "기본";}
+function demoReply(id,{main,ctx}){
+  let r = DEMO[id][detectTopic(main+" "+ctx.join(" "))];
+  if(ctx.length) r = `(말해준 "${ctx.join(", ")}" 상황을 생각하며)\n` + r;
+  return r;
+}
+
+/* ========== 6. LLM 연동 ========== */
+function systemPrompt(id,others){
+  const s=SAGES[id];
+  return `너는 ${s.name}이다. 철학: ${s.summary} 말투: ${s.style}.
+카카오톡 메시지처럼 한국어로 3~5문장, 짧게 답한다. 일상적인 비유나 짧은 예시를 하나 넣는다.
+사용자 입력 중 [상황/배경] 표시된 내용은 사용자의 상황·감정·배경 설명이니 조언에 반영한다.
+${others?`이 방은 단톡방이며 다른 성현(${others})도 답한다. 앞선 답과 겹치지 않게 너만의 관점으로 말한다.`:""}
+의학·법률 등 위기 상황(자해 등)이 보이면 전문가나 주변 사람의 도움을 권한다.`;
+}
+function toUserText({main,ctx}){return main + (ctx.length?`\n[상황/배경] ${ctx.join(" / ")}`:"");}
+
+async function llmReply(id,parsed,priorReplies,others){
+  const {provider,apiKey,model}=settings;
+  // 1:1 방은 최근 대화 10개를 맥락으로 전달
+  const past = room!=="group" ? hist().slice(-11,-1).map(m=>({role:m.from==="me"?"user":"assistant",content:m.text})) : [];
+  let user = toUserText(parsed);
+  if(priorReplies.length) user += "\n\n[앞선 성현들의 답]\n"+priorReplies.join("\n");
+  const msgs=[...past,{role:"user",content:user}];
+  if(provider==="anthropic"){
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:model||"claude-sonnet-5-5",max_tokens:500,system:systemPrompt(id,others),messages:msgs})});
+    if(!r.ok) throw new Error("Anthropic "+r.status+": "+(await r.text()).slice(0,150));
+    const j=await r.json(); return j.content.map(c=>c.text||"").join("");
+  }
+  if(provider==="openai"){
+    const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey},
+      body:JSON.stringify({model:model||"gpt-4o-mini",max_tokens:500,messages:[{role:"system",content:systemPrompt(id,others)},...msgs]})});
+    if(!r.ok) throw new Error("OpenAI "+r.status+": "+(await r.text()).slice(0,150));
+    const j=await r.json(); return j.choices[0].message.content;
+  }
+  throw new Error("demo");
+}
+async function getReply(id,parsed,prior,others){
+  if(settings.provider==="demo"||!settings.apiKey) return demoReply(id,parsed);
+  try{return await llmReply(id,parsed,prior,others);}
+  catch(e){console.warn(e);return demoReply(id,parsed)+"\n\n⚠️ API 호출 실패로 데모 답변을 보여드려요. ("+e.message+")";}
+}
+
+/* ========== 7. 렌더링 ========== */
+const $=s=>document.querySelector(s);
+const chat=$("#chat");
+const now=()=>new Date().toLocaleTimeString("ko-KR",{hour:"numeric",minute:"2-digit"});
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function msgEl(m){
+  const d=document.createElement("div");
+  if(m.from==="me"){d.className="row me";d.innerHTML=`<span class="time">${m.time}</span><div class="bubble">${esc(m.text)}</div>`;}
+  else{const s=SAGES[m.from];d.className="row sage";
+    d.innerHTML=`<div class="avatar" style="background:${s.color}" data-id="${m.from}">${s.emoji}</div><div class="body"><div class="name">${s.name}<span class="tag">${s.tag}</span></div><div style="display:flex;align-items:flex-end;gap:5px"><div class="bubble">${esc(m.text)}</div><span class="time">${m.time}</span></div></div>`;}
+  return d;
+}
+function render(){
+  const isGroup=room==="group";
+  $("#roomTitle").innerHTML=(isGroup?"성현 단톡방":SAGES[room].name)+`<small>${isGroup?IDS.length+1:2}</small>`;
+  chat.innerHTML=`<div class="date"><span>${new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span></div>`;
+  if(!hist().length){
+    const greet=isGroup?{from:"socrates",text:"어서 오게. 이 방엔 동서양의 성현들이 모여 있다네. 어떤 고민이든 털어놓아 보게. 고민에 맞는 이들이 답할 걸세.",time:now()}
+      :{from:room,text:`${SAGES[room].name}일세. ${SAGES[room].summary}\n무엇이 자네를 괴롭히는가?`,time:now()};
+    chat.appendChild(msgEl(greet));
+  }
+  hist().forEach(m=>chat.appendChild(msgEl(m)));
+  document.querySelectorAll("#modebar button").forEach(b=>b.classList.toggle("on",b.dataset.room===room));
+  chat.scrollTop=chat.scrollHeight;
+}
+function renderModebar(){
+  $("#modebar").innerHTML=`<button data-room="group">👥 전체 단톡방</button>`+IDS.map(id=>`<button data-room="${id}">${SAGES[id].emoji} ${SAGES[id].name}</button>`).join("");
+}
+function showTyping(id){
+  const s=SAGES[id],d=document.createElement("div");
+  d.className="row sage typing";
+  d.innerHTML=`<div class="avatar" style="background:${s.color}">${s.emoji}</div><div class="body"><div class="name">${s.name}</div><div class="bubble">•••</div></div>`;
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ========== 8. 전송 ========== */
+let busy=false;
+async function send(){
+  const text=$("#input").value.trim(); if(!text||busy) return;
+  busy=true;$("#send").disabled=true;$("#input").value="";
+  const targetRoom=room;
+  const push=m=>{(histories[targetRoom] ||= []).push(m);save();if(room===targetRoom){chat.appendChild(msgEl(m));chat.scrollTop=chat.scrollHeight;}};
+  push({from:"me",text,time:now()});
+  const parsed=parseInput(text);
+  const sages=targetRoom==="group"?pickSages(text):[targetRoom];
+  const others=targetRoom==="group"?sages.map(i=>SAGES[i].name).join(", "):"";
+  const prior=[];
+  for(const id of sages){
+    await sleep(400);
+    const t=room===targetRoom?showTyping(id):null;
+    const [reply]=await Promise.all([getReply(id,parsed,prior,others),sleep(900+Math.random()*900)]);
+    t&&t.remove();
+    prior.push(`${SAGES[id].name}: ${reply}`);
+    push({from:id,text:reply,time:now()});
+  }
+  busy=false;$("#send").disabled=false;$("#input").focus();
+}
+
+/* ========== 9. 이벤트 ========== */
+$("#send").onclick=send;
+$("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
+$("#modebar").onclick=e=>{const b=e.target.closest("button");if(b){room=b.dataset.room;render();}};
+$("#backBtn").onclick=()=>{room="group";render();};
+$("#menuBtn").onclick=()=>{$("#provider").value=settings.provider;$("#apiKey").value=settings.apiKey;$("#model").value=settings.model;$("#settingsModal").classList.add("show");};
+$("#closeSet").onclick=()=>$("#settingsModal").classList.remove("show");
+$("#saveSet").onclick=()=>{settings={provider:$("#provider").value,apiKey:$("#apiKey").value.trim(),model:$("#model").value.trim()};localStorage.setItem(LS("settings"),JSON.stringify(settings));$("#settingsModal").classList.remove("show");};
+$("#resetChat").onclick=()=>{if(confirm("현재 대화방 내역을 지울까요?")){histories[room]=[];save();render();$("#settingsModal").classList.remove("show");}};
+$("#peopleBtn").onclick=()=>{$("#plist").innerHTML=IDS.map(id=>{const s=SAGES[id];return `<div data-id="${id}"><span class="avatar" style="background:${s.color}">${s.emoji}</span><span><b>${s.name}</b><span class="badge">${s.tag}</span><p>${s.summary}</p></span></div>`}).join("");$("#peopleModal").classList.add("show");};
+$("#closePeople").onclick=()=>$("#peopleModal").classList.remove("show");
+$("#plist").onclick=e=>{const d=e.target.closest("[data-id]");if(d){room=d.dataset.id;$("#peopleModal").classList.remove("show");render();}};
+function openProfile(id){const s=SAGES[id];$("#profileCard").innerHTML=`<div class="avatar" style="background:${s.color};width:60px;height:60px;font-size:32px;margin-bottom:10px">${s.emoji}</div><h3>${s.name}<span class="badge">${s.tag}</span></h3><p style="font-size:14px;line-height:1.6;margin:8px 0">${s.summary}</p><p style="font-size:12px;color:#777">말투: ${s.style}</p><div class="btns"><button class="pri" id="go1">1:1 대화하기</button><button id="closeProf">닫기</button></div>`;$("#profileModal").classList.add("show");
+  $("#go1").onclick=()=>{room=id;$("#profileModal").classList.remove("show");render();};$("#closeProf").onclick=()=>$("#profileModal").classList.remove("show");}
+chat.onclick=e=>{const a=e.target.closest(".avatar[data-id]");if(a) openProfile(a.dataset.id);};
+document.querySelectorAll(".modal").forEach(m=>m.onclick=e=>{if(e.target===m) m.classList.remove("show");});
+
+renderModebar();render();
+</script>
+</body>
+</html>
