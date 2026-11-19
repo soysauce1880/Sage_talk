@@ -82,9 +82,18 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
 .avatar img,.mini{width:100%;height:100%;object-fit:cover}
 .mini{width:22px;height:22px;border-radius:8px;vertical-align:middle;margin-right:4px}
 #cPrev{width:64px;height:64px;border-radius:20px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+#lock{position:fixed;inset:0;background:#b2c7d9;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#lock.hide{display:none}
+#lock .logo{width:72px;height:72px;border-radius:24px;background:#fee500;display:flex;align-items:center;justify-content:center;font-size:36px}
+#lock input{width:180px;text-align:center;font-size:24px;letter-spacing:10px;padding:10px;border:none;border-radius:10px}
+#lock button{width:180px;padding:11px;border:none;border-radius:10px;background:#3c1e1e;color:#fee500;font-weight:700;font-size:15px}
+#lockMsg{font-size:13px;color:#c0392b;min-height:16px}
 </style>
 </head>
 <body>
+<div id="lock"><div class="logo">💬</div><b>성현 상담톡</b>
+  <input id="pw" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
+  <button id="pwBtn">입장</button><div id="lockMsg"></div></div>
 <div id="app">
   <header>
     <button id="backBtn" title="단톡방으로">‹</button>
@@ -388,6 +397,17 @@ $("#cSave").onclick=()=>{
 };
 const _wipe=$("#wipeAll").onclick;$("#wipeAll").onclick=()=>{_wipe();if(!localStorage.getItem(LS("hist"))){localStorage.removeItem("sagetalk_chars");customs=[];loadCustoms();renderModebar();render();}};
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+/* ===== 입장 비밀번호 (한 번 맞히면 이 기기에서는 다시 묻지 않음) ===== */
+const PW_HASH="6062c68c3fdcea26a3170da31ddacc4e380916c0c8b726f8c38144665b84c481";
+async function sha(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+if(localStorage.getItem("sagetalk_auth")===PW_HASH) $("#lock").classList.add("hide"); else setTimeout(()=>$("#pw").focus(),100);
+async function tryPw(){
+  if(await sha("sagetalk:"+$("#pw").value)===PW_HASH){localStorage.setItem("sagetalk_auth",PW_HASH);$("#lock").classList.add("hide");}
+  else{$("#lockMsg").textContent="비밀번호가 달라요";$("#pw").value="";}
+}
+$("#pwBtn").onclick=tryPw;
+$("#pw").addEventListener("keydown",e=>{if(e.key==="Enter")tryPw();});
 
 renderModebar();render();
 </script>
