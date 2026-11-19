@@ -272,10 +272,14 @@ async function llmReply(id,parsed,priorReplies,others){
     const m=curModel();
     const contents=msgs.map(x=>({role:x.role==="assistant"?"model":"user",parts:[{text:x.content}]}));
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":apiKey},
-      body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt(id,others)}]},contents,generationConfig:{maxOutputTokens:2048}})});
+      body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt(id,others)}]},contents,generationConfig:{maxOutputTokens:2048},
+        // 감정선·로맨스·드라마 대화가 과하게 끊기지 않도록 '높음' 위험만 차단
+        safetySettings:["HARM_CATEGORY_HARASSMENT","HARM_CATEGORY_HATE_SPEECH","HARM_CATEGORY_SEXUALLY_EXPLICIT","HARM_CATEGORY_DANGEROUS_CONTENT"].map(category=>({category,threshold:"BLOCK_ONLY_HIGH"}))})});
     if(!r.ok) throw new Error("Gemini "+r.status+": "+(await r.text()).slice(0,150));
     const j=await r.json(); const t=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("");
-    if(!t) throw new Error("Gemini 빈 응답"); return t;
+    if(!t){const why=j.promptFeedback?.blockReason||j.candidates?.[0]?.finishReason||"";
+      throw new Error(/SAFETY|BLOCK|PROHIBITED/i.test(why)?"Gemini 안전 필터에 걸렸어요 ("+why+"). 표현을 조금 바꿔 다시 보내보세요":"Gemini 빈 응답 "+why);}
+    return t;
   }
   throw new Error("demo");
 }
