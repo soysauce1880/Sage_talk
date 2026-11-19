@@ -107,7 +107,9 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
     <label>API 키 (이 브라우저 localStorage에만 저장)</label>
     <input id="apiKey" type="password" placeholder="sk-...">
     <label>모델명</label>
-    <input id="model" placeholder="비우면 기본값: claude-sonnet-5-5 / gpt-4o-mini / gemini-2.5-flash">
+    <select id="model"></select>
+    <input id="modelCustom" placeholder="모델명 직접 입력" style="display:none;margin-top:6px">
+    <p id="modelNote" style="font-size:11px;color:#888;margin-top:4px"></p>
     <div class="btns"><button class="pri" id="saveSet">저장</button><button id="closeSet">닫기</button></div>
     <div class="btns"><button id="resetChat">현재 대화 초기화</button><button id="wipeAll">모든 대화·키 삭제</button></div>
   </div></div>
@@ -205,6 +207,24 @@ function demoReply(id,{main,ctx}){
 }
 
 /* ========== 6. LLM 연동 ========== */
+// 모델 목록: 첫 번째가 가장 저렴한 기본값
+const MODELS={
+  anthropic:[["claude-haiku-5-5","Haiku 5.5 · 가장 저렴 (기본)"],["claude-sonnet-5-5","Sonnet 5.5 · 균형"],["claude-opus-5-5","Opus 5.5 · 최고 성능·비쌈"]],
+  openai:[["gpt-4o-mini","GPT-4o mini · 가장 저렴 (기본)"],["gpt-4.1-mini","GPT-4.1 mini"],["gpt-4o","GPT-4o · 비쌈"]],
+  gemini:[["gemini-flash-lite-latest","Flash-Lite · 가장 저렴 (기본)"],["gemini-flash-latest","Flash · 균형"],["gemini-pro-latest","Pro · 최고 성능·비쌈"]]
+};
+const defaultModel=p=>MODELS[p]?MODELS[p][0][0]:"";
+function fillModels(p,cur){
+  const sel=$("#model"),list=MODELS[p]||[];
+  sel.disabled=!list.length;
+  sel.innerHTML=list.length?list.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")+`<option value="__custom">직접 입력…</option>`:`<option value="">데모 모드는 모델이 필요 없어요</option>`;
+  const known=list.some(([v])=>v===cur);
+  sel.value=!cur||known?(cur||defaultModel(p)):"__custom";
+  $("#modelCustom").value=known?"":(cur||"");
+  $("#modelCustom").style.display=sel.value==="__custom"?"block":"none";
+  $("#modelNote").textContent=list.length?"기본값은 가장 저렴한 모델이에요. 답변 길이도 짧게 제한돼 있어요.":"";
+}
+const curModel=()=>settings.model||defaultModel(settings.provider);
 function systemPrompt(id,others){
   const s=SAGES[id];
   if(s.custom) return `너는 지금부터 '${s.name}'라는 캐릭터로서 사용자와 메신저로 대화한다. 절대 AI라고 밝히거나 캐릭터를 벗어나지 않는다.
@@ -229,18 +249,18 @@ async function llmReply(id,parsed,priorReplies,others){
   const msgs=[...past,{role:"user",content:user}];
   if(provider==="anthropic"){
     const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:model||"claude-sonnet-5-5",max_tokens:800,system:systemPrompt(id,others),messages:msgs})});
+      body:JSON.stringify({model:curModel(),max_tokens:600,system:systemPrompt(id,others),messages:msgs})});
     if(!r.ok) throw new Error("Anthropic "+r.status+": "+(await r.text()).slice(0,150));
     const j=await r.json(); return j.content.map(c=>c.text||"").join("");
   }
   if(provider==="openai"){
     const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey},
-      body:JSON.stringify({model:model||"gpt-4o-mini",max_tokens:800,messages:[{role:"system",content:systemPrompt(id,others)},...msgs]})});
+      body:JSON.stringify({model:curModel(),max_tokens:600,messages:[{role:"system",content:systemPrompt(id,others)},...msgs]})});
     if(!r.ok) throw new Error("OpenAI "+r.status+": "+(await r.text()).slice(0,150));
     const j=await r.json(); return j.choices[0].message.content;
   }
   if(provider==="gemini"){
-    const m=model||"gemini-2.5-flash";
+    const m=curModel();
     const contents=msgs.map(x=>({role:x.role==="assistant"?"model":"user",parts:[{text:x.content}]}));
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":apiKey},
       body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt(id,others)}]},contents,generationConfig:{maxOutputTokens:2048}})});
@@ -322,9 +342,11 @@ $("#send").onclick=send;
 $("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
 $("#modebar").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.add)return openCharForm();room=b.dataset.room;render();};
 $("#backBtn").onclick=()=>{room="group";render();};
-$("#menuBtn").onclick=()=>{$("#provider").value=settings.provider;$("#apiKey").value=settings.apiKey;$("#model").value=settings.model;$("#settingsModal").classList.add("show");};
+$("#menuBtn").onclick=()=>{$("#provider").value=settings.provider;$("#apiKey").value=settings.apiKey;fillModels(settings.provider,settings.model);$("#settingsModal").classList.add("show");};
+$("#provider").onchange=e=>fillModels(e.target.value,"");
+$("#model").onchange=e=>{$("#modelCustom").style.display=e.target.value==="__custom"?"block":"none";};
 $("#closeSet").onclick=()=>$("#settingsModal").classList.remove("show");
-$("#saveSet").onclick=()=>{settings={provider:$("#provider").value,apiKey:$("#apiKey").value.trim(),model:$("#model").value.trim()};localStorage.setItem(LS("settings"),JSON.stringify(settings));$("#settingsModal").classList.remove("show");};
+$("#saveSet").onclick=()=>{settings={provider:$("#provider").value,apiKey:$("#apiKey").value.trim(),model:($("#model").value==="__custom"?$("#modelCustom").value.trim():$("#model").value)};localStorage.setItem(LS("settings"),JSON.stringify(settings));$("#settingsModal").classList.remove("show");};
 $("#resetChat").onclick=()=>{if(confirm("현재 대화방 내역을 지울까요?")){histories[room]=[];save();render();$("#settingsModal").classList.remove("show");}};
 $("#wipeAll").onclick=()=>{if(confirm("모든 대화 내역과 저장된 API 키를 이 브라우저에서 삭제할까요?")){localStorage.removeItem(LS("hist"));localStorage.removeItem(LS("settings"));histories={};settings={provider:"demo",apiKey:"",model:""};room="group";$("#settingsModal").classList.remove("show");render();}};
 $("#peopleBtn").onclick=()=>{$("#plist").innerHTML=[...IDS,...customs.map(c=>c.id)].map(id=>{const s=SAGES[id];return `<div data-id="${id}"><span class="avatar" style="background:${s.color}">${av(s)}</span><span><b>${esc(s.name)}</b><span class="badge">${s.tag}</span><p>${esc(s.summary.slice(0,80))}</p></span></div>`}).join("")+`<div data-add="1"><span class="avatar" style="background:#eee">＋</span><span><b>새 캐릭터 만들기</b><p>소설·웹툰 속 캐릭터의 서사와 말투를 입력하면 1:1로 대화할 수 있어요</p></span></div>`;$("#peopleModal").classList.add("show");};
