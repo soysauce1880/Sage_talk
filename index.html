@@ -158,8 +158,10 @@ const SAGES = {
   epictetus:{name:"에픽테토스",emoji:"⛓️",color:"#e5e5e5",tag:"스토아",summary:"통제할 수 있는 것과 없는 것을 구분하라. 사건이 아니라 사건에 대한 판단이 우리를 괴롭힌다.",style:"단호하지만 담백한 어조, 노예 출신다운 현실적 예시",keys:["불안","통제","눈치","평판","걱정","분노"]},
   seneca:{name:"세네카",emoji:"🖋️",color:"#e8dfd3",tag:"스토아",summary:"시간은 가장 귀한 재산. 우리는 실제보다 상상 속에서 더 많이 괴로워한다.",style:"편지처럼 다정한 어조, '루킬리우스에게 쓰듯' 조언, 시간·하루 단위 실천",keys:["번아웃","시간","걱정","바쁨","미래","불안"]},
   nietzsche:{name:"니체",emoji:"⚡",color:"#f3d6d6",tag:"실존",summary:"타인의 잣대가 아닌 나만의 가치를 창조하라. 너 자신이 되어라. 운명을 사랑하라.",style:"강렬하고 선언적인 어조, 낙타·사자·아이 비유, 짧은 아포리즘",keys:["자존감","비교","눈치","실패","열등감","진로"]},
-  camus:{name:"카뮈·사르트르",emoji:"🪨",color:"#d9e9d2",tag:"실존",summary:"세상은 부조리하지만 의미는 내가 선택해 만든다. 시지프는 행복하다고 상상해야 한다.",style:"담담하고 솔직한 어조, 시지프의 바위·카페 웨이터 예시, 선택과 책임 강조",keys:["의미","진로","결정","허무","불확실","번아웃"]}
+  camus:{name:"카뮈·사르트르",emoji:"🪨",color:"#d9e9d2",tag:"실존",summary:"세상은 부조리하지만 의미는 내가 선택해 만든다. 시지프는 행복하다고 상상해야 한다.",style:"담담하고 솔직한 어조, 시지프의 바위·카페 웨이터 예시, 선택과 책임 강조",keys:["의미","진로","결정","허무","불확실","번아웃"]},
+  freud:{name:"프로이트",emoji:"🛋️",color:"#e6d8cc",tag:"정신분석",summary:"마음의 대부분은 의식 아래 무의식에 있다. 반복되는 감정과 행동 뒤에는 억압된 욕망·어린 시절의 경험·방어기제가 숨어 있고, 그것을 말로 꺼내 이해할 때 증상은 힘을 잃는다.",style:"차분하고 분석적인 의사의 어조, 시가를 든 노신사처럼 '흥미롭군요' 하며 꿈·말실수·반복되는 패턴을 짚고 되묻는 화법",keys:["꿈","불안","연애","부모","가족","반복","죄책감","분노","트라우마"]}
 };
+const WORKS={laozi:"『도덕경』",confucius:"『논어』, 『중용』, 『대학』",buddha:"초기 경전(『법구경』, 『숫타니파타』, 아함경·니까야), 사성제·팔정도·연기",zhuangzi:"『장자』 내편(소요유, 제물론, 양생주 등)과 외·잡편",socrates:"플라톤의 대화편(『변론』, 『크리톤』, 『파이돈』, 『국가』 등)과 크세노폰의 기록",epictetus:"『엥케이리디온』, 『담화록』 (그리고 스토아 동료 세네카의 『루킬리우스에게 보내는 편지』)",seneca:"『루킬리우스에게 보내는 편지』, 『인생의 짧음에 관하여』, 『화에 관하여』, 『마음의 평정에 관하여』",nietzsche:"『차라투스트라는 이렇게 말했다』, 『즐거운 학문』, 『선악의 저편』, 『도덕의 계보』, 『우상의 황혼』",camus:"카뮈의 『시지프 신화』, 『이방인』, 『페스트』, 『반항하는 인간』과 사르트르의 『실존주의는 휴머니즘이다』, 『존재와 무』, 『닫힌 방』",freud:"『꿈의 해석』, 『일상생활의 정신병리학』, 『정신분석 강의』, 『쾌락원칙을 넘어서』, 『자아와 이드』, 『애도와 멜랑콜리』, 『문명 속의 불만』"};
 const IDS = Object.keys(SAGES);
 const av=s=>s.img?`<img src="${s.img}" alt="">`:s.emoji; // 단톡방은 성현만
 let customs = JSON.parse(localStorage.getItem("sagetalk_chars")||"[]");
@@ -195,7 +197,7 @@ function pickSages(text){
 const TOPICS = {
   눈치:["눈치","눈칫","시선","평가","어색"], 불안:["불안","걱정","초조","무서","두려"],
   인간관계:["관계","친구","상사","동료","가족","연인","싸웠","서운"], 번아웃:["번아웃","지쳐","지침","피곤","힘들","의욕"],
-  진로:["진로","이직","퇴사","취업","꿈","선택"]
+  진로:["진로","이직","퇴사","취업","선택","장래"]
 };
 const DEMO = {
   laozi:{눈치:"물은 그릇 모양을 탓하지 않네. 남의 눈빛을 다 담으려 애쓰면 그릇이 깨지지. 오늘은 한 번쯤 '그냥 그런가 보다' 하고 흘려보내 보게나.",불안:"흙탕물은 휘저을수록 흐려지지. 가만히 두면 저절로 맑아진다네. 불안도 붙잡지 말고 잠시 가라앉게 두게.",인간관계:"강과 바다가 온갖 물을 받는 건 낮은 곳에 있기 때문이네. 먼저 이기려 하지 말고 한 걸음 낮춰 보게.",번아웃:"활을 끝까지 당기면 줄이 끊어지네. 지금 자네에게 필요한 건 더 당기는 게 아니라 손을 놓는 일이라네.",진로:"길은 걸어서 생기는 것이지. 지도부터 완벽히 그리려 하지 말고, 발이 가는 쪽으로 한 걸음 디뎌 보게.",기본:"억지로 풀려 할수록 매듭은 조여지네. 힘을 빼고 물처럼 상황을 따라가 보게나."},
@@ -206,7 +208,8 @@ const DEMO = {
   epictetus:{눈치:"남의 평가는 자네 손에 없다. 자네 손에 있는 건 오늘 자네가 어떻게 행동하느냐뿐이다. 거기에만 힘을 써라.",불안:"종이 두 칸을 그려라. 왼쪽엔 내가 바꿀 수 있는 것, 오른쪽엔 바꿀 수 없는 것. 오른쪽 칸 걱정은 오늘부로 내려놓아라.",인간관계:"누군가 자네를 화나게 했다면, 자네를 화나게 한 건 그 사람이 아니라 자네의 판단이다.",번아웃:"마라톤 선수는 모든 구간을 전력질주하지 않는다. 자네가 조절할 수 있는 페이스부터 정하라.",진로:"결과는 신의 몫, 노력은 자네 몫이다. 활을 잘 쏘는 데 집중하고 과녁에 맞는지는 놓아 두라.",기본:"사건이 아니라 사건에 대한 판단이 자네를 괴롭힌다. 판단을 바꿔 보라."},
   seneca:{눈치:"친애하는 벗이여, 모든 사람에게 사랑받으려는 사람은 결국 누구에게도 자기 자신으로 남지 못한다네.",불안:"우리는 현실보다 상상 속에서 더 자주 고통받는다네. 오늘 밤, 걱정 목록 중 실제로 일어난 일만 체크해 보게.",인간관계:"화가 났다면 하루만 미루게. 분노의 가장 좋은 치료제는 지연이라네.",번아웃:"인생은 짧지 않네, 다만 우리가 낭비할 뿐이지. 오늘 하루 중 한 시간만이라도 온전히 자네 것으로 지켜 주게.",진로:"어느 항구로 갈지 모르는 배에겐 어떤 바람도 순풍이 아니라네. 먼저 자네의 항구를 정하세.",기본:"오늘을 마지막 날처럼, 그러나 서두르지 않고 살아 보게. 그게 내 조언이라네."},
   nietzsche:{눈치:"너는 낙타처럼 남의 짐을 지고 있다. 이제 사자가 되어 '아니'라고 말하라! 그다음엔 아이처럼 너만의 놀이를 시작하라.",불안:"너를 죽이지 못하는 것은 너를 더 강하게 만든다. 이 불안은 너의 근육이 자라는 소리다.",인간관계:"무리의 박수 소리에 귀를 기울이지 마라. 너를 진짜로 존중하는 몇 사람이면 충분하다.",번아웃:"남이 정한 성공의 사다리를 오르느라 지쳤는가? 춤출 줄 모르는 별은 태어나지 않는다. 너만의 리듬을 되찾아라.",진로:"왜 살아야 하는지 아는 자는 어떤 상황도 견딘다. 너의 '왜'를 찾아라.",기본:"너 자신이 되어라! 남이 정한 가치가 아니라 네가 창조한 가치로 살아라."},
-  camus:{눈치:"사르트르가 말했지, 타인은 지옥이라고. 하지만 그 시선 속에서도 어떻게 살지는 결국 자네가 고르는 거야.",불안:"세상은 원래 답을 주지 않아. 그게 부조리지. 답이 없다는 걸 받아들이면 오히려 숨이 쉬어진다네.",인간관계:"관계에 정답 매뉴얼은 없어. 자네가 어떤 사람이고 싶은지를 먼저 고르고, 그 선택에 따라 행동해 보게.",번아웃:"시지프는 매일 바위를 굴려. 그래도 나는 그가 행복하다고 상상해야 한다고 썼지. 같은 일상 속에서도 자네만의 의미 한 조각을 찾아보게.",진로:"인간은 자유롭도록 선고받았어. 선택하지 않는 것도 선택이지. 그러니 차라리 자네 손으로 고르게.",기본:"의미는 발견하는 게 아니라 만드는 거야. 오늘 작은 선택 하나로 시작해 보게."}
+  camus:{눈치:"사르트르가 말했지, 타인은 지옥이라고. 하지만 그 시선 속에서도 어떻게 살지는 결국 자네가 고르는 거야.",불안:"세상은 원래 답을 주지 않아. 그게 부조리지. 답이 없다는 걸 받아들이면 오히려 숨이 쉬어진다네.",인간관계:"관계에 정답 매뉴얼은 없어. 자네가 어떤 사람이고 싶은지를 먼저 고르고, 그 선택에 따라 행동해 보게.",번아웃:"시지프는 매일 바위를 굴려. 그래도 나는 그가 행복하다고 상상해야 한다고 썼지. 같은 일상 속에서도 자네만의 의미 한 조각을 찾아보게.",진로:"인간은 자유롭도록 선고받았어. 선택하지 않는 것도 선택이지. 그러니 차라리 자네 손으로 고르게.",기본:"의미는 발견하는 게 아니라 만드는 거야. 오늘 작은 선택 하나로 시작해 보게."},
+  freud:{눈치:"흥미롭군요. 당신이 그토록 신경 쓰는 '남의 시선'은 사실 어린 시절 부모의 시선이 마음속 초자아로 자리 잡은 것일 수 있어요. 지금 그 눈은 누구의 눈을 닮았나요?",불안:"불안은 마음속 무언가가 의식으로 올라오려 할 때 울리는 경보와 같아요. 경보를 끄려고만 하지 말고, 무엇이 문을 두드리는지 떠오르는 대로 말해 보세요.",인간관계:"우리는 새 사람에게 옛사람을 겹쳐 보곤 합니다. 정신분석에선 이걸 전이라 부르지요. 그 사람이 당신에게 누구를 떠올리게 하나요?",번아웃:"쉬지 못하는 마음 뒤에는 '쉬면 벌을 받는다'는 오래된 죄책감이 숨어 있기도 해요. 사랑하고 일하는 것, 건강한 삶엔 둘 다 필요합니다.",진로:"정말 원하는 길과 '원해야 한다'고 배운 길이 섞여 있지 않은지 보세요. 꿈에서 반복되는 장면이 있다면 그게 실마리가 될 수 있습니다.",기본:"같은 감정, 같은 실수가 반복된다면 그건 우연이 아니에요. 반복은 아직 말로 꺼내지 못한 기억의 다른 표현이니까요. 천천히, 떠오르는 대로 이야기해 보세요."}
 };
 function detectTopic(t){for(const [k,ws] of Object.entries(TOPICS)) if(ws.some(w=>t.includes(w))) return k; return "기본";}
 function demoReply(id,{main,ctx}){
@@ -237,10 +240,23 @@ function fillModels(p,cur){
 const curModel=()=>settings.model||defaultModel(settings.provider);
 function systemPrompt(id,others){
   const s=SAGES[id];
+  if(!s.custom) return `너는 ${s.name}이다. 실제 역사 속 ${s.name}의 저작과 기록 — ${WORKS[id]} — 그리고 학계에서 받아들여지는 그의 사상을 근거로, "${s.name}이라면 이 고민에 이렇게 답했을 것이다"라는 가정 아래 답한다.
+[핵심 사상] ${s.summary}
+[말투] ${s.style}
+규칙:
+- 반드시 그의 실제 개념·논리·일화에 기반해 답하고, 그가 하지 않았을 주장이나 현대적 상식을 그의 입을 빌려 말하지 않는다.
+- 저작 속 구절이나 개념을 자연스럽게 녹이되, 원문 인용은 확실히 알고 있는 경우에만 하고 그 외에는 의역하며 필요하면 책 이름을 짧게 언급한다(예: "『도덕경』에서 말했듯…"). 출처나 인용을 지어내지 않는다.
+- 일상적인 비유나 짧은 예시를 하나 넣는다.
+- 한국어 카톡 메시지처럼 3~5문장으로 짧게 답한다.
+- [지금까지 대화]가 주어지면 그 흐름을 이어서, 앞서 사용자가 한 말과 다른 성현들의 말을 기억하고 필요하면 동의·반박·보충한다. 같은 말을 반복하지 않는다.
+- 사용자 입력의 [상황/배경]은 상황·감정·배경 설명이니 반영한다.
+${others?`이 방은 단톡방이며 이번 차례에 ${others}가 답한다. 앞선 답과 겹치지 않게 너만의 관점으로 말한다.`:""}
+- 자해·위기 상황이 보이면 그의 어조를 유지하되 주변 사람이나 전문가의 도움을 분명히 권한다.`;
   if(s.custom) return `너는 지금부터 '${s.name}'라는 캐릭터로서 사용자와 메신저로 대화한다. 절대 AI라고 밝히거나 캐릭터를 벗어나지 않는다.
 [서사·배경] ${s.summary}
 [성격·말투] ${s.style||"서사에 어울리게"}
 [사용자와의 관계] ${s.rel||"서사에 어울리게 자연스럽게"}
+[지금까지 대화]가 주어지면 그 장면과 감정선을 그대로 이어서 답한다.
 규칙: 한국어 카톡 메시지처럼 1~4문장으로 짧게 답한다. 행동·표정 묘사는 *별표* 안에 짧게 넣을 수 있다. 서사와 성격을 일관되게 유지하고, 이전 대화 내용을 기억해 이어간다. 사용자 입력의 [상황/배경]은 지금 장면이나 사용자 감정에 대한 설명으로 반영한다.`;
   return `너는 ${s.name}이다. 철학: ${s.summary} 말투: ${s.style}.
 카카오톡 메시지처럼 한국어로 3~5문장, 짧게 답한다. 일상적인 비유나 짧은 예시를 하나 넣는다.
@@ -250,13 +266,16 @@ ${others?`이 방은 단톡방이며 다른 성현(${others})도 답한다. 앞�
 }
 function toUserText({main,ctx}){return main + (ctx.length?`\n[상황/배경] ${ctx.join(" / ")}`:"");}
 
-async function llmReply(id,parsed,priorReplies,others){
+async function llmReply(id,parsed,priorReplies,others,before,rm){
   const {provider,apiKey,model}=settings;
-  // 1:1 방은 최근 대화 10개를 맥락으로 전달
-  const past = room!=="group" ? hist().slice(SAGES[room]?.custom?-31:-11,-1).map(m=>({role:m.from==="me"?"user":"assistant",content:m.text})) : [];
-  let user = toUserText(parsed);
-  if(priorReplies.length) user += "\n\n[앞선 성현들의 답]\n"+priorReplies.join("\n");
-  const msgs=[...past,{role:"user",content:user}];
+  // 이 대화방의 이전 대화를 대본 형태로 전달 → 대화가 이어짐
+  const N = SAGES[rm]?.custom ? 30 : rm==="group" ? 24 : 16;
+  const lines=(before||[]).slice(-N).map(m=>{
+    const t=m.text.split("\n\n⚠️")[0].split("\n\n(데모 모드")[0];
+    return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}: ${t}`;});
+  let user = (lines.length?"[지금까지 대화 (오래된 순)]\n"+lines.join("\n")+"\n\n[이번 메시지]\n":"") + toUserText(parsed);
+  if(priorReplies.length) user += "\n\n[이번 메시지에 먼저 답한 성현들]\n"+priorReplies.join("\n");
+  const msgs=[{role:"user",content:user}];
   if(provider==="anthropic"){
     const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:curModel(),max_tokens:600,system:systemPrompt(id,others),messages:msgs})});
@@ -284,9 +303,9 @@ async function llmReply(id,parsed,priorReplies,others){
   }
   throw new Error("demo");
 }
-async function getReply(id,parsed,prior,others){
+async function getReply(id,parsed,prior,others,before,rm){
   if(settings.provider==="demo"||!settings.apiKey) return demoReply(id,parsed);
-  try{return await llmReply(id,parsed,prior,others);}
+  try{return await llmReply(id,parsed,prior,others,before,rm);}
   catch(e){console.warn(e);return demoReply(id,parsed)+"\n\n⚠️ API 호출 실패로 데모 답변을 보여드려요. ("+e.message+")";}
 }
 
@@ -335,6 +354,7 @@ async function send(){
   busy=true;$("#send").disabled=true;$("#input").value="";
   const targetRoom=room;
   const push=m=>{(histories[targetRoom] ||= []).push(m);save();if(room===targetRoom){chat.appendChild(msgEl(m));chat.scrollTop=chat.scrollHeight;}};
+  const before=(histories[targetRoom]||[]).slice();
   push({from:"me",text,time:now()});
   const parsed=parseInput(text);
   const sages=targetRoom==="group"?pickSages(text):[targetRoom];
@@ -343,7 +363,7 @@ async function send(){
   for(const id of sages){
     await sleep(400);
     const t=room===targetRoom?showTyping(id):null;
-    const [reply]=await Promise.all([getReply(id,parsed,prior,others),sleep(900+Math.random()*900)]);
+    const [reply]=await Promise.all([getReply(id,parsed,prior,others,before,targetRoom),sleep(900+Math.random()*900)]);
     t&&t.remove();
     prior.push(`${SAGES[id].name}: ${reply}`);
     push({from:id,text:reply,time:now()});
