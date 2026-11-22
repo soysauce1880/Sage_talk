@@ -163,6 +163,20 @@ const SAGES = {
 };
 const WORKS={laozi:"『도덕경』",confucius:"『논어』, 『중용』, 『대학』",buddha:"초기 경전(『법구경』, 『숫타니파타』, 아함경·니까야), 사성제·팔정도·연기",zhuangzi:"『장자』 내편(소요유, 제물론, 양생주 등)과 외·잡편",socrates:"플라톤의 대화편(『변론』, 『크리톤』, 『파이돈』, 『국가』 등)과 크세노폰의 기록",epictetus:"『엥케이리디온』, 『담화록』 (그리고 스토아 동료 세네카의 『루킬리우스에게 보내는 편지』)",seneca:"『루킬리우스에게 보내는 편지』, 『인생의 짧음에 관하여』, 『화에 관하여』, 『마음의 평정에 관하여』",nietzsche:"『차라투스트라는 이렇게 말했다』, 『즐거운 학문』, 『선악의 저편』, 『도덕의 계보』, 『우상의 황혼』",camus:"카뮈의 『시지프 신화』, 『이방인』, 『페스트』, 『반항하는 인간』과 사르트르의 『실존주의는 휴머니즘이다』, 『존재와 무』, 『닫힌 방』",freud:"『꿈의 해석』, 『일상생활의 정신병리학』, 『정신분석 강의』, 『쾌락원칙을 넘어서』, 『자아와 이드』, 『애도와 멜랑콜리』, 『문명 속의 불만』"};
 const IDS = Object.keys(SAGES);
+/* 워너비 코치: 실존 방송인을 흉내 내지 않고, 공개된 방송 스타일을 분석해 코칭 */
+const COACHES={
+  jaejae:{name:"재재 스타일 코치",emoji:"🎤",color:"#ffe0ec",tag:"워너비",coach:true,model:"재재",
+    summary:"선함·사회성·재미를 다 갖춘 진행. 항상 높은 텐션과 웃음, 상대가 민망하지 않게 유머로 거절하면서도 호락호락하지 않은 단단함.",
+    style:"밝고 빠른 텐션, 리액션 크게, 핵심은 똑 부러지게"},
+  chim:{name:"침착맨 스타일 코치",emoji:"😌",color:"#e3ecd9",tag:"워너비",coach:true,model:"침착맨",
+    summary:"사람을 편안하게 하는 힘. 부담 주지 않는 느슨함, 힘 뺀 농담과 자기 비하 유머, 같이 있으면 그냥 재밌고 호감 가는 사람.",
+    style:"느긋하고 담백한 말투, 과장 없는 농담, 툭 던지는 현실 조언"}
+};
+Object.assign(SAGES,COACHES);
+const GROUPS={
+  group:{name:"성현 단톡방",members:()=>IDS,pick:t=>pickSages(t),greet:{from:"socrates",text:"어서 오게. 이 방엔 동서양의 성현들이 모여 있다네. 어떤 고민이든 털어놓아 보게. 고민에 맞는 이들이 답할 걸세."}},
+  wannabe:{name:"워너비 단톡방",members:()=>Object.keys(COACHES),pick:()=>Object.keys(COACHES),greet:{from:"jaejae",text:"어서 오세요~! 여기는 '재재처럼, 침착맨처럼' 되고 싶은 분을 위한 방이에요 🎤 실제 상황이나 고민을 던져주시면, 두 사람이라면 어떻게 했을지 코치 둘이 같이 뜯어볼게요!"}}
+};
 const av=s=>s.img?`<img src="${s.img}" alt="">`:s.emoji; // 단톡방은 성현만
 let customs = JSON.parse(localStorage.getItem("sagetalk_chars")||"[]");
 const COLORS=["#ffd6e0","#d6e4ff","#e2f0cb","#fde2c8","#e8d5f5","#c9f0ef"];
@@ -213,6 +227,7 @@ const DEMO = {
 };
 function detectTopic(t){for(const [k,ws] of Object.entries(TOPICS)) if(ws.some(w=>t.includes(w))) return k; return "기본";}
 function demoReply(id,{main,ctx}){
+  if(SAGES[id].coach) return id==="jaejae"?"재재식 핵심은 '웃으면서 선 긋기'예요! 거절할 때도 리액션 먼저 크게 받아주고, 마지막에 농담 한 스푼 + 단호한 한 줄. 오늘 하나만 연습해 봐요: 부탁받으면 '와 저 찾아주신 거 영광인데요~ 이번엔 진짜 안 돼요ㅋㅋ'\n\n(데모 모드예요. 실제 코칭은 ☰에서 API 키를 넣어주세요)":"침착맨식 핵심은 '힘 빼기'예요. 잘 보이려고 애쓰는 게 상대한테도 부담이 되거든요. 오늘은 대화에서 웃기려고 하지 말고, 떠오른 생각을 반쯤 느슨하게 툭 말해 보세요.\n\n(데모 모드예요. 실제 코칭은 ☰에서 API 키를 넣어주세요)";
   if(SAGES[id].custom) return `${SAGES[id].greeting||"..."}\n\n(데모 모드예요. 캐릭터와 진짜 대화하려면 ☰ 설정에서 API 키를 넣어주세요)`;
   let r = DEMO[id][detectTopic(main+" "+ctx.join(" "))];
   if(ctx.length) r = `(말해준 "${ctx.join(", ")}" 상황을 생각하며)\n` + r;
@@ -240,6 +255,15 @@ function fillModels(p,cur){
 const curModel=()=>settings.model||defaultModel(settings.provider);
 function systemPrompt(id,others){
   const s=SAGES[id];
+  if(s.coach) return `너는 '${s.name}'다. 사용자는 방송인 ${s.model}처럼 되고 싶어 한다. 너는 ${s.model} 본인이 아니며, 본인인 척하거나 1인칭으로 그 사람 행세를 하지 않는다. 대신 ${s.model}이 방송·영상에서 공개적으로 보여준 대화 방식과 태도를 잘 아는 코치로서 말한다.
+[${s.model}의 강점] ${s.summary}
+[코치 말투] ${s.style}
+규칙:
+- 사용자의 상황에서 "${s.model}이라면 이런 식으로 받았을 것"을 구체적으로 보여준다. 예시 멘트는 '${s.model}식으로 하면 "…" 정도'처럼 예시임이 분명하게 제시한다. 실제로 한 말인 것처럼 지어내지 않는다.
+- 왜 그게 통하는지(상대 기분, 타이밍, 텐션, 선 긋기 등) 짧게 짚고, 사용자가 바로 따라 해볼 수 있는 연습 하나를 준다.
+- 사용자가 무리하게 따라 하다 자기다움을 잃는 지점이 보이면 솔직히 말한다. 목표는 사용자의 성장이다.
+- 한국어 카톡 메시지처럼 3~6문장. [지금까지 대화]가 있으면 이어서 말하고, 다른 코치의 말과 겹치지 않게 보완한다.
+- 사용자 입력의 [상황/배경]은 상황 설명으로 반영한다.`;
   if(!s.custom) return `너는 ${s.name}이다. 실제 역사 속 ${s.name}의 저작과 기록 — ${WORKS[id]} — 그리고 학계에서 받아들여지는 그의 사상을 근거로, "${s.name}이라면 이 고민에 이렇게 답했을 것이다"라는 가정 아래 답한다.
 [핵심 사상] ${s.summary}
 [말투] ${s.style}
@@ -272,7 +296,7 @@ function toUserText({main,ctx}){return main + (ctx.length?`\n[상황/배경] ${c
 async function llmReply(id,parsed,priorReplies,others,before,rm){
   const {provider,apiKey,model}=settings;
   // 이 대화방의 이전 대화를 대본 형태로 전달 → 대화가 이어짐
-  const N = SAGES[rm]?.custom ? 30 : rm==="group" ? 24 : 16;
+  const N = SAGES[rm]?.custom ? 30 : GROUPS[rm] ? 24 : 16;
   const lines=(before||[]).slice(-N).map(m=>{
     const t=m.text.split("\n\n⚠️")[0].split("\n\n(데모 모드")[0];
     return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}: ${t}`;});
@@ -326,12 +350,12 @@ function msgEl(m){
   return d;
 }
 function render(){
-  const isGroup=room==="group";
-  if(!SAGES[room]&&room!=="group") room="group";
-  $("#roomTitle").innerHTML=(isGroup?"성현 단톡방":SAGES[room].name)+`<small>${isGroup?IDS.length+1:2}</small>`;
+  if(!SAGES[room]&&!GROUPS[room]) room="group";
+  const G=GROUPS[room],isGroup=!!G;
+  $("#roomTitle").innerHTML=(isGroup?G.name:SAGES[room].name)+`<small>${isGroup?G.members().length+1:2}</small>`;
   chat.innerHTML=`<div class="date"><span>${new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span></div>`;
   if(!hist().length){
-    const greet=isGroup?{from:"socrates",text:"어서 오게. 이 방엔 동서양의 성현들이 모여 있다네. 어떤 고민이든 털어놓아 보게. 고민에 맞는 이들이 답할 걸세.",time:now()}
+    const greet=isGroup?{...G.greet,time:now()}
       :{from:room,text:SAGES[room].custom?(SAGES[room].greeting||"..."):`${SAGES[room].name}일세. ${SAGES[room].summary}\n무엇이 자네를 괴롭히는가?`,time:now()};
     chat.appendChild(msgEl(greet));
   }
@@ -340,7 +364,7 @@ function render(){
   chat.scrollTop=chat.scrollHeight;
 }
 function renderModebar(){
-  $("#modebar").innerHTML=`<button data-room="group">👥 전체 단톡방</button>`+IDS.map(id=>`<button data-room="${id}">${SAGES[id].emoji} ${SAGES[id].name}</button>`).join("")+customs.map(c=>`<button data-room="${c.id}">${c.img?`<img class="mini" src="${c.img}">`:c.emoji} ${esc(c.name)}</button>`).join("")+`<button class="add" data-add="1">＋ 캐릭터</button>`;
+  $("#modebar").innerHTML=`<button data-room="group">👥 전체 단톡방</button><button data-room="wannabe">✨ 워너비 단톡방</button>`+IDS.map(id=>`<button data-room="${id}">${SAGES[id].emoji} ${SAGES[id].name}</button>`).join("")+customs.map(c=>`<button data-room="${c.id}">${c.img?`<img class="mini" src="${c.img}">`:c.emoji} ${esc(c.name)}</button>`).join("")+`<button class="add" data-add="1">＋ 캐릭터</button>`;
 }
 function showTyping(id){
   const s=SAGES[id],d=document.createElement("div");
@@ -360,8 +384,8 @@ async function send(){
   const before=(histories[targetRoom]||[]).slice();
   push({from:"me",text,time:now()});
   const parsed=parseInput(text);
-  const sages=targetRoom==="group"?pickSages(text):[targetRoom];
-  const others=targetRoom==="group"?sages.map(i=>SAGES[i].name).join(", "):"";
+  const sages=GROUPS[targetRoom]?GROUPS[targetRoom].pick(text):[targetRoom];
+  const others=GROUPS[targetRoom]?sages.map(i=>SAGES[i].name).join(", "):"";
   const prior=[];
   for(const id of sages){
     await sleep(400);
@@ -390,6 +414,7 @@ $("#peopleBtn").onclick=()=>{$("#plist").innerHTML=[...IDS,...customs.map(c=>c.i
 $("#closePeople").onclick=()=>$("#peopleModal").classList.remove("show");
 $("#plist").onclick=e=>{if(e.target.closest("[data-add]")){$("#peopleModal").classList.remove("show");return openCharForm();}const d=e.target.closest("[data-id]");if(d){room=d.dataset.id;$("#peopleModal").classList.remove("show");render();}};
 function openProfile(id){const s=SAGES[id];$("#profileCard").innerHTML=`<div class="avatar" style="background:${s.color};width:60px;height:60px;font-size:32px;margin-bottom:10px">${av(s)}</div><h3>${esc(s.name)}<span class="badge">${s.tag}</span></h3><p style="font-size:14px;line-height:1.6;margin:8px 0;white-space:pre-wrap">${esc(s.summary)}</p><p style="font-size:12px;color:#777">말투: ${esc(s.style||"-")}</p><div class="btns"><button class="pri" id="go1">1:1 대화하기</button><button id="closeProf">닫기</button></div>${s.custom?`<div class="btns"><button id="editC">수정</button><button id="delC">삭제</button></div>`:""}`;
+  if(s.coach) $("#go1").remove();
   if(s.custom){$("#editC").onclick=()=>{$("#profileModal").classList.remove("show");openCharForm(id);};
     $("#delC").onclick=()=>{if(confirm(`${s.name} 캐릭터와 대화 내역을 삭제할까요?`)){customs=customs.filter(c=>c.id!==id);delete histories[id];save();saveCustoms();room="group";$("#profileModal").classList.remove("show");renderModebar();render();}};}$("#profileModal").classList.add("show");
   $("#go1").onclick=()=>{room=id;$("#profileModal").classList.remove("show");render();};$("#closeProf").onclick=()=>$("#profileModal").classList.remove("show");}
