@@ -380,7 +380,7 @@ function msgEl(m){
   const d=document.createElement("div");
   const q=m.replyTo?`<div class="quote"><b>↩ ${esc(m.replyTo.name)}에게 답장</b>${esc(m.replyTo.text.slice(0,60))}</div>`:"";
   if(m.from==="me"){d.className="row me";d.innerHTML=`<span class="time">${m.time}</span><div class="bubble">${q}${esc(m.text)}</div>`;}
-  else{const s=SAGES[m.from];d.className="row sage";
+  else{const s=SAGES[m.from]||{name:"(알 수 없음)",emoji:"❔",color:"#ddd",tag:""};d.className="row sage";
     d.innerHTML=`<div class="avatar" style="background:${s.color}" data-id="${m.from}">${av(s)}</div><div class="body"><div class="name">${s.name}<span class="tag">${s.tag}</span></div>${(()=>{const parts=m.text.split(/\n+/).map(x=>x.trim()).filter(Boolean);if(!parts.length)parts.push("");return parts.map((t,i)=>`<div style="display:flex;align-items:flex-end;gap:5px;margin-top:${i?4:0}px"><div class="bubble">${esc(t)}</div>${i===parts.length-1?`<span class="time">${m.time}</span>`:""}</div>`).join("");})()}</div>`;if(m.pid)d.classList.add("pending");}
   // 길게 누르기(또는 우클릭) → 답장
   const setR=()=>setReply(m);let lt;d.querySelectorAll(".bubble").forEach(b=>{
@@ -428,6 +428,11 @@ function clearReply(){replyTo=null;$("#replyBar").classList.remove("show");}
 async function send(){
   const text=$("#input").value.trim(); if(!text||busy) return;
   busy=true;$("#send").disabled=true;$("#input").value="";
+  try{ await sendInner(text); }
+  catch(e){console.error(e);alert("전송 중 오류가 났어요: "+e.message);}
+  finally{busy=false;$("#send").disabled=false;$("#input").focus();}
+}
+async function sendInner(text){
   const targetRoom=room,rt=replyTo;clearReply();
   const push=m=>{(histories[targetRoom] ||= []).push(m);save();if(room===targetRoom){chat.appendChild(msgEl(m));chat.scrollTop=chat.scrollHeight;}};
   const before=(histories[targetRoom]||[]).slice();
@@ -454,7 +459,6 @@ async function send(){
     prior.push(`${SAGES[id].name}: ${reply}`);
     push({from:id,text:reply,time:now()});
   }
-  busy=false;$("#send").disabled=false;$("#input").focus();
 }
 /* ===== 붐빔 오류 시 5분 뒤 자동 재답변 (앱을 닫았다 열어도 이어서 처리) ===== */
 let pending=JSON.parse(localStorage.getItem("sagetalk_pending")||"[]");
