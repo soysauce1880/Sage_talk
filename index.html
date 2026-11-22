@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>성현 상담톡</title>
 <meta name="robots" content="noindex, nofollow, noarchive">
 <link rel="manifest" href="manifest.json">
@@ -100,6 +100,9 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
 #memberList label{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #f0f0f0;margin:0;font-size:14px}
 #memberList input{width:18px;height:18px}
 #memberList .avatar{width:32px;height:32px;font-size:17px;border-radius:12px}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0}
+#app{height:var(--vvh,100dvh)!important}
 </style>
 </head>
 <body>
@@ -600,6 +603,17 @@ async function tryPw(){
 $("#pwBtn").onclick=tryPw;
 $("#pw").addEventListener("keydown",e=>{if(e.key==="Enter")tryPw();});
 
+/* 키보드가 올라와도 화면 전체(헤더·대화)가 보이도록 실제 보이는 높이에 맞춤 */
+function fitViewport(){
+  const vv=window.visualViewport,h=vv?vv.height:window.innerHeight;
+  document.documentElement.style.setProperty("--vvh",h+"px");
+  window.scrollTo(0,0);
+  chat.scrollTop=chat.scrollHeight;
+}
+if(window.visualViewport){visualViewport.addEventListener("resize",fitViewport);visualViewport.addEventListener("scroll",()=>window.scrollTo(0,0));}
+window.addEventListener("resize",fitViewport);
+$("#input").addEventListener("focus",()=>setTimeout(fitViewport,300));
+fitViewport();
 renderModebar();render();
 setTimeout(processPending,1500);
 </script>
