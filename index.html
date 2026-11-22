@@ -97,6 +97,9 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
 #replyBar button{border:none;background:none;font-size:16px;cursor:pointer}
 .bubble{-webkit-user-select:none;user-select:none;cursor:pointer}
 .pending .bubble{color:#888;font-style:italic}
+#memberList label{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #f0f0f0;margin:0;font-size:14px}
+#memberList input{width:18px;height:18px}
+#memberList .avatar{width:32px;height:32px;font-size:17px;border-radius:12px}
 </style>
 </head>
 <body>
@@ -107,6 +110,7 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
   <header>
     <button id="backBtn" title="단톡방으로">‹</button>
     <div class="title" id="roomTitle">성현 단톡방<small id="memberCnt"></small></div>
+    <button id="memberBtn" title="단톡방 멤버 관리" style="font-size:15px;font-weight:600">👤±</button>
     <button id="peopleBtn" title="성현 프로필">👥</button>
     <button id="menuBtn" title="설정">☰</button>
   </header>
@@ -133,6 +137,12 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
     <div class="btns"><button id="resetChat">현재 대화 초기화</button><button id="wipeAll">모든 대화·키 삭제</button></div>
   </div></div>
 
+  <div class="modal" id="memberModal"><div class="card">
+    <h3 id="memberTitle">멤버 관리</h3>
+    <p style="font-size:12px;color:#777;margin-bottom:8px">체크하면 이 단톡방에 초대, 해제하면 내보내요.</p>
+    <div id="memberList"></div>
+    <div class="btns"><button class="pri" id="memberSave">저장</button><button id="memberReset">기본 멤버로</button><button id="memberClose">닫기</button></div>
+  </div></div>
   <div class="modal" id="peopleModal"><div class="card">
     <h3>성현·철학자 프로필</h3>
     <div class="plist" id="plist"></div>
@@ -185,9 +195,14 @@ Object.assign(SAGES,COACHES);
 let AV=JSON.parse(localStorage.getItem("sagetalk_avatars")||"{}");
 function applyAvatars(){for(const id in SAGES){if(!SAGES[id].custom) SAGES[id].img=AV[id]||"";}}
 applyAvatars();
+/* 단톡방 멤버 (추가·내보내기 가능, 이 기기에 저장) */
+const DEFAULT_MEMBERS={group:()=>[...IDS,...Object.keys(COACHES)],wannabe:()=>Object.keys(COACHES)};
+let MEMBERS=JSON.parse(localStorage.getItem("sagetalk_members")||"{}");
+function getMembers(g){return (MEMBERS[g]||DEFAULT_MEMBERS[g]()).filter(id=>SAGES[id]);}
+function setMembers(g,list){MEMBERS[g]=list;localStorage.setItem("sagetalk_members",JSON.stringify(MEMBERS));}
 const GROUPS={
-  group:{name:"성현 단톡방",members:()=>[...IDS,...Object.keys(COACHES)],pick:t=>pickSages(t),greet:{from:"socrates",text:"어서 오게. 이 방엔 동서양의 성현들이 모여 있다네. 요즘 사람인 재재와 침착맨도 와 있지. 어떤 고민이든 털어놓아 보게. 고민에 맞는 이들이 답할 걸세."}},
-  wannabe:{name:"워너비 단톡방",members:()=>Object.keys(COACHES),pick:()=>Object.keys(COACHES),greet:{from:"jaejae",text:"어머 어서 오세요~!! 여기 오신 거 진짜 환영해요ㅋㅋㅋ 오늘 무슨 일 있었는지 하나도 빠짐없이 다 풀어주세요! 저 들을 준비 완료!!"}}
+  group:{name:"성현 단톡방",members:()=>getMembers("group"),pick:t=>pickSages(t,getMembers("group")),greet:{from:"socrates",text:"어서 오게. 이 방엔 동서양의 성현들이 모여 있다네. 요즘 사람인 재재와 침착맨도 와 있지. 어떤 고민이든 털어놓아 보게. 고민에 맞는 이들이 답할 걸세."}},
+  wannabe:{name:"워너비 단톡방",members:()=>getMembers("wannabe"),pick:()=>getMembers("wannabe"),greet:{from:"jaejae",text:"어머 어서 오세요~!! 여기 오신 거 진짜 환영해요ㅋㅋㅋ 오늘 무슨 일 있었는지 하나도 빠짐없이 다 풀어주세요! 저 들을 준비 완료!!"}}
 };
 const av=s=>s.img?`<img src="${s.img}" alt="">`:s.emoji; // 단톡방은 성현만
 let customs = JSON.parse(localStorage.getItem("sagetalk_chars")||"[]");
@@ -212,8 +227,8 @@ function parseInput(text){
 }
 
 /* ========== 4. 성현 선택 (단톡방) ========== */
-function pickSages(text){
-  const scored = [...IDS,...Object.keys(COACHES)].map(id=>({id,s:SAGES[id].keys.filter(k=>text.includes(k)).length+Math.random()*0.5}));
+function pickSages(text,pool){
+  const scored = pool.map(id=>({id,s:(SAGES[id].keys||[]).filter(k=>text.includes(k)).length+Math.random()*0.5}));
   scored.sort((a,b)=>b.s-a.s);
   const n = 2 + Math.floor(Math.random()*3); // 2~4명
   return scored.slice(0,n).map(x=>x.id);
@@ -314,6 +329,7 @@ ${others?`이 방은 단톡방이며 이번 차례에 ${others}가 답한다. �
 [성격·말투] ${s.style||"서사에 어울리게"}
 [사용자와의 관계] ${s.rel||"서사에 어울리게 자연스럽게"}
 [지금까지 대화]가 주어지면 그 장면과 감정선을 그대로 이어서 답한다.
+단톡방에 다른 인물들이 함께 있을 수 있다. 다른 사람이 먼저 한 말이 있으면 내 캐릭터답게 받아치거나 이어가되, 남의 말투는 따라 하지 않는다. [답장 대상 메시지]가 있으면 그 메시지에 이어서 답한다.
 규칙: 한국어 카톡 메시지처럼 1~4문장으로 짧게 답한다. 행동·표정 묘사는 *별표* 안에 짧게 넣을 수 있다. 서사와 성격을 일관되게 유지하고, 이전 대화 내용을 기억해 이어간다. 사용자 입력의 [상황/배경]은 지금 장면이나 사용자 감정에 대한 설명으로 반영한다.`;
   return `너는 ${s.name}이다. 철학: ${s.summary} 말투: ${s.style}.
 카카오톡 메시지처럼 한국어로 3~5문장, 짧게 답한다. 일상적인 비유나 짧은 예시를 하나 넣는다.
@@ -327,7 +343,7 @@ async function llmReply(id,parsed,priorReplies,others,before,rm){
   const {provider,apiKey,model}=settings;
   // 이 대화방의 이전 대화를 대본 형태로 전달 → 대화가 이어짐
   const N = SAGES[rm]?.custom ? 30 : GROUPS[rm] ? 24 : 16;
-  const lines=(before||[]).filter(m=>!m.text.startsWith("⚠️")).slice(-N).map(m=>{
+  const lines=(before||[]).filter(m=>!m.text.startsWith("⚠️")&&m.from!=="system").slice(-N).map(m=>{
     const t=m.text.split("\n\n⚠️")[0].split("\n\n(데모 모드")[0];
     return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}${m.replyTo?` (→ ${m.replyTo.name}의 "${m.replyTo.text.slice(0,40)}"에 답장)`:""}: ${t}`;});
   let user = (lines.length?"[지금까지 대화 (오래된 순)]\n"+lines.join("\n")+"\n\n[이번 메시지]\n":"") + toUserText(parsed);
@@ -379,6 +395,7 @@ const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 function msgEl(m){
   const d=document.createElement("div");
   const q=m.replyTo?`<div class="quote"><b>↩ ${esc(m.replyTo.name)}에게 답장</b>${esc(m.replyTo.text.slice(0,60))}</div>`:"";
+  if(m.from==="system"){d.className="date";d.innerHTML=`<span>${esc(m.text)}</span>`;return d;}
   if(m.from==="me"){d.className="row me";d.innerHTML=`<span class="time">${m.time}</span><div class="bubble">${q}${esc(m.text)}</div>`;}
   else{const s=SAGES[m.from]||{name:"(알 수 없음)",emoji:"❔",color:"#ddd",tag:""};d.className="row sage";
     d.innerHTML=`<div class="avatar" style="background:${s.color}" data-id="${m.from}">${av(s)}</div><div class="body"><div class="name">${s.name}<span class="tag">${s.tag}</span></div>${(()=>{const parts=m.text.split(/\n+/).map(x=>x.trim()).filter(Boolean);if(!parts.length)parts.push("");return parts.map((t,i)=>`<div style="display:flex;align-items:flex-end;gap:5px;margin-top:${i?4:0}px"><div class="bubble">${esc(t)}</div>${i===parts.length-1?`<span class="time">${m.time}</span>`:""}</div>`).join("");})()}</div>`;if(m.pid)d.classList.add("pending");}
@@ -393,10 +410,11 @@ function msgEl(m){
 function render(){
   if(!SAGES[room]&&!GROUPS[room]) room="group";
   const G=GROUPS[room],isGroup=!!G;
+  $("#memberBtn").style.display=isGroup?"":"none";
   $("#roomTitle").innerHTML=(isGroup?G.name:SAGES[room].name)+`<small>${isGroup?G.members().length+1:2}</small>`;
   chat.innerHTML=`<div class="date"><span>${new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span></div>`;
   if(!hist().length){
-    const greet=isGroup?{...G.greet,time:now()}
+    const greet=isGroup?(G.members().includes(G.greet.from)?{...G.greet,time:now()}:G.members().length?{from:G.members()[0],text:`${G.name}에 어서 오세요. 무슨 이야기든 해 주세요.`,time:now()}:null)
       :{from:room,text:SAGES[room].custom?(SAGES[room].greeting||"..."):`${SAGES[room].name}일세. ${SAGES[room].summary}\n무엇이 자네를 괴롭히는가?`,time:now()};
     chat.appendChild(msgEl(greet));
   }
@@ -485,6 +503,28 @@ setInterval(processPending,20000);
 /* ========== 9. 이벤트 ========== */
 $("#send").onclick=send;
 $("#replyX").onclick=clearReply;
+$("#memberBtn").onclick=()=>{
+  const G=GROUPS[room]; if(!G) return; const cur=G.members();
+  $("#memberTitle").textContent=G.name+" 멤버 관리";
+  $("#memberList").innerHTML=[...IDS,...Object.keys(COACHES),...customs.map(c=>c.id)].map(id=>{const s=SAGES[id];
+    return `<label><input type="checkbox" value="${id}" ${cur.includes(id)?"checked":""}><span class="avatar" style="background:${s.color}">${av(s)}</span>${esc(s.name)}<span class="badge">${s.tag}</span></label>`;}).join("");
+  $("#memberModal").classList.add("show");
+};
+$("#memberClose").onclick=()=>$("#memberModal").classList.remove("show");
+function applyMembers(list){
+  const g=room,before=GROUPS[g].members();
+  setMembers(g,list);
+  const added=list.filter(x=>!before.includes(x)).map(x=>SAGES[x].name),removed=before.filter(x=>!list.includes(x)).map(x=>SAGES[x].name);
+  const note=[added.length?`${added.join(", ")}님이 들어왔습니다.`:"",removed.length?`${removed.join(", ")}님이 나갔습니다.`:""].filter(Boolean).join(" ");
+  if(note){(histories[g] ||= []).push({from:"system",text:note,time:now()});save();}
+  $("#memberModal").classList.remove("show");render();
+}
+$("#memberSave").onclick=()=>{
+  const list=[...document.querySelectorAll("#memberList input:checked")].map(x=>x.value);
+  if(!list.length) return alert("최소 한 명은 있어야 해요.");
+  applyMembers(list);
+};
+$("#memberReset").onclick=()=>{delete MEMBERS[room];localStorage.setItem("sagetalk_members",JSON.stringify(MEMBERS));applyMembers(DEFAULT_MEMBERS[room]());};
 $("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
 $("#modebar").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.add)return openCharForm();room=b.dataset.room;render();};
 $("#backBtn").onclick=()=>{room="group";render();};
