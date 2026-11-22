@@ -235,6 +235,21 @@ function demoReply(id,{main,ctx}){
 }
 
 /* ========== 6. LLM 연동 ========== */
+// 서버 과부하(429/500/503/529) 시 잠깐 기다렸다 최대 2번 다시 시도
+async function fetchRetry(url,opts){
+  let r;
+  for(let i=0;i<3;i++){
+    r=await fetch(url,opts);
+    if(![429,500,502,503,529].includes(r.status)) return r;
+    if(i<2) await new Promise(res=>setTimeout(res,1500*(i+1)));
+  }
+  return r;
+}
+const BUSY=[429,500,502,503,529];
+function apiErr(name,status,body){
+  const e=new Error(BUSY.includes(status)?`${name} 서버가 지금 붐벼요(${status}). 잠시 후 다시 보내주세요`:status===400||status===401||status===403?`${name} 키나 설정을 확인해 주세요(${status})`:`${name} 오류 ${status}: ${body.slice(0,120)}`);
+  e.busy=BUSY.includes(status); return e;
+}
 // 모델 목록: 첫 번째가 가장 저렴한 기본값
 const MODELS={
   anthropic:[["claude-haiku-5-5","Haiku 5.5 · 가장 저렴 (기본)"],["claude-sonnet-5-5","Sonnet 5.5 · 균형"],["claude-opus-5-5","Opus 5.5 · 최고 성능·비쌈"]],
@@ -297,32 +312,36 @@ async function llmReply(id,parsed,priorReplies,others,before,rm){
   const {provider,apiKey,model}=settings;
   // 이 대화방의 이전 대화를 대본 형태로 전달 → 대화가 이어짐
   const N = SAGES[rm]?.custom ? 30 : GROUPS[rm] ? 24 : 16;
-  const lines=(before||[]).slice(-N).map(m=>{
+  const lines=(before||[]).filter(m=>!m.text.startsWith("⚠️")).slice(-N).map(m=>{
     const t=m.text.split("\n\n⚠️")[0].split("\n\n(데모 모드")[0];
     return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}: ${t}`;});
   let user = (lines.length?"[지금까지 대화 (오래된 순)]\n"+lines.join("\n")+"\n\n[이번 메시지]\n":"") + toUserText(parsed);
   if(priorReplies.length) user += "\n\n[이번 메시지에 먼저 답한 성현들]\n"+priorReplies.join("\n");
   const msgs=[{role:"user",content:user}];
   if(provider==="anthropic"){
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    const r=await fetchRetry("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:curModel(),max_tokens:600,system:systemPrompt(id,others),messages:msgs})});
-    if(!r.ok) throw new Error("Anthropic "+r.status+": "+(await r.text()).slice(0,150));
+    if(!r.ok) throw apiErr("Claude",r.status,await r.text());
     const j=await r.json(); return j.content.map(c=>c.text||"").join("");
   }
   if(provider==="openai"){
-    const r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey},
+    const r=await fetchRetry("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey},
       body:JSON.stringify({model:curModel(),max_tokens:600,messages:[{role:"system",content:systemPrompt(id,others)},...msgs]})});
-    if(!r.ok) throw new Error("OpenAI "+r.status+": "+(await r.text()).slice(0,150));
+    if(!r.ok) throw apiErr("OpenAI",r.status,await r.text());
     const j=await r.json(); return j.choices[0].message.content;
   }
   if(provider==="gemini"){
-    const m=curModel();
+    const tryModels=[curModel(),...MODELS.gemini.map(x=>x[0]).filter(x=>x!==curModel()&&!/pro/.test(x))];
+    let r,m;
+    for(m of tryModels){
     const contents=msgs.map(x=>({role:x.role==="assistant"?"model":"user",parts:[{text:x.content}]}));
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":apiKey},
+    r=await fetchRetry(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":apiKey},
       body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt(id,others)}]},contents,generationConfig:{maxOutputTokens:2048},
         // 감정선·로맨스·드라마 대화가 과하게 끊기지 않도록 '높음' 위험만 차단
         safetySettings:["HARM_CATEGORY_HARASSMENT","HARM_CATEGORY_HATE_SPEECH","HARM_CATEGORY_SEXUALLY_EXPLICIT","HARM_CATEGORY_DANGEROUS_CONTENT"].map(category=>({category,threshold:"BLOCK_ONLY_HIGH"}))})});
-    if(!r.ok) throw new Error("Gemini "+r.status+": "+(await r.text()).slice(0,150));
+      if(r.ok||!BUSY.includes(r.status)) break; // 붐비면 다음(대체) 모델로
+    }
+    if(!r.ok) throw apiErr("Gemini",r.status,await r.text());
     const j=await r.json(); const t=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("");
     if(!t){const why=j.promptFeedback?.blockReason||j.candidates?.[0]?.finishReason||"";
       throw new Error(/SAFETY|BLOCK|PROHIBITED/i.test(why)?"Gemini 안전 필터에 걸렸어요 ("+why+"). 표현을 조금 바꿔 다시 보내보세요":"Gemini 빈 응답 "+why);}
@@ -333,7 +352,7 @@ async function llmReply(id,parsed,priorReplies,others,before,rm){
 async function getReply(id,parsed,prior,others,before,rm){
   if(settings.provider==="demo"||!settings.apiKey) return demoReply(id,parsed);
   try{return await llmReply(id,parsed,prior,others,before,rm);}
-  catch(e){console.warn(e);return demoReply(id,parsed)+"\n\n⚠️ API 호출 실패로 데모 답변을 보여드려요. ("+e.message+")";}
+  catch(e){console.warn(e);return "⚠️ "+e.message+(e.busy?"":"\n(오류가 계속되면 ☰ 설정을 확인해 주세요)");}
 }
 
 /* ========== 7. 렌더링 ========== */
