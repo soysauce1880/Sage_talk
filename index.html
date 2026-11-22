@@ -60,12 +60,12 @@ textarea{flex:1;border:none;resize:none;font-size:16px;padding:8px;max-height:10
 
 /* ===== 반응형: 폴드 펼침·태블릿 (600px 이상) ===== */
 body{background:#b2c7d9}
-#app{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto auto;
-  grid-template-areas:"header" "modebar" "chat" "hint" "footer"}
+#app{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto auto auto;
+  grid-template-areas:"header" "modebar" "chat" "hint" "reply" "footer"}
 header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-height:0} .hint{grid-area:hint} footer{grid-area:footer}
 @media (min-width:600px){
-  #app{max-width:none;grid-template-columns:minmax(220px,30%) 1fr;grid-template-rows:auto 1fr auto auto;
-    grid-template-areas:"modebar header" "modebar chat" "modebar hint" "modebar footer"}
+  #app{max-width:none;grid-template-columns:minmax(220px,30%) 1fr;grid-template-rows:auto 1fr auto auto auto;
+    grid-template-areas:"modebar header" "modebar chat" "modebar hint" "modebar reply" "modebar footer"}
   #modebar{flex-direction:column;overflow-y:auto;overflow-x:hidden;gap:4px;padding:calc(12px + env(safe-area-inset-top)) 10px 12px;
     background:#fff;border-top:none;border-right:1px solid #d5dde5}
   #modebar::before{content:"대화방";font-weight:700;font-size:15px;padding:4px 8px 8px}
@@ -89,6 +89,14 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
 #lock input{width:180px;text-align:center;font-size:24px;letter-spacing:10px;padding:10px;border:none;border-radius:10px}
 #lock button{width:180px;padding:11px;border:none;border-radius:10px;background:#3c1e1e;color:#fee500;font-weight:700;font-size:15px}
 #lockMsg{font-size:13px;color:#c0392b;min-height:16px}
+.quote{font-size:12px;color:#555;border-left:3px solid rgba(0,0,0,.25);padding:2px 0 2px 7px;margin-bottom:6px;white-space:normal}
+.quote b{display:block;font-size:11px}
+#replyBar{display:none;background:#f4f4f4;padding:7px 12px;font-size:12px;color:#444;align-items:center;gap:8px;grid-area:reply}
+#replyBar.show{display:flex}
+#replyBar span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#replyBar button{border:none;background:none;font-size:16px;cursor:pointer}
+.bubble{-webkit-user-select:none;user-select:none;cursor:pointer}
+.pending .bubble{color:#888;font-style:italic}
 </style>
 </head>
 <body>
@@ -104,7 +112,8 @@ header{grid-area:header} #modebar{grid-area:modebar} #chat{grid-area:chat;min-he
   </header>
   <div id="modebar"></div>
   <div id="chat"></div>
-  <div class="hint">팁: 괄호 () 안에 상황·감정·배경을 적으면 조언에 반영돼요. 예) 회의 때 말을 못 하겠어요 (신입이고 팀장님이 무서움)</div>
+  <div class="hint">팁: 말풍선을 길게 누르면 답장할 수 있어요. 괄호 () 안에 상황·감정·배경을 적으면 조언에 반영돼요. 예) 회의 때 말을 못 하겠어요 (신입이고 팀장님이 무서움)</div>
+  <div id="replyBar"><span id="replyTxt"></span><button id="replyX">✕</button></div>
   <footer>
     <textarea id="input" rows="1" placeholder="고민을 입력하세요"></textarea>
     <button id="send">전송</button>
@@ -306,7 +315,7 @@ ${others?`이 방은 단톡방이며 이번 차례에 ${others}가 답한다. �
 ${others?`이 방은 단톡방이며 다른 성현(${others})도 답한다. 앞선 답과 겹치지 않게 너만의 관점으로 말한다.`:""}
 의학·법률 등 위기 상황(자해 등)이 보이면 전문가나 주변 사람의 도움을 권한다.`;
 }
-function toUserText({main,ctx}){return main + (ctx.length?`\n[상황/배경] ${ctx.join(" / ")}`:"");}
+function toUserText({main,ctx,replyTo}){return (replyTo?`[답장 대상 메시지] ${replyTo.name}: "${replyTo.text}"\n(사용자는 위 메시지에 대한 답장으로 아래 말을 했다. 그 메시지의 흐름을 이어서 답한다.)\n`:"") + main + (ctx.length?`\n[상황/배경] ${ctx.join(" / ")}`:"");}
 
 async function llmReply(id,parsed,priorReplies,others,before,rm){
   const {provider,apiKey,model}=settings;
@@ -314,7 +323,7 @@ async function llmReply(id,parsed,priorReplies,others,before,rm){
   const N = SAGES[rm]?.custom ? 30 : GROUPS[rm] ? 24 : 16;
   const lines=(before||[]).filter(m=>!m.text.startsWith("⚠️")).slice(-N).map(m=>{
     const t=m.text.split("\n\n⚠️")[0].split("\n\n(데모 모드")[0];
-    return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}: ${t}`;});
+    return `${m.from==="me"?"나":SAGES[m.from]?.name||"?"}${m.replyTo?` (→ ${m.replyTo.name}의 "${m.replyTo.text.slice(0,40)}"에 답장)`:""}: ${t}`;});
   let user = (lines.length?"[지금까지 대화 (오래된 순)]\n"+lines.join("\n")+"\n\n[이번 메시지]\n":"") + toUserText(parsed);
   if(priorReplies.length) user += "\n\n[이번 메시지에 먼저 답한 성현들]\n"+priorReplies.join("\n");
   const msgs=[{role:"user",content:user}];
@@ -352,7 +361,7 @@ async function llmReply(id,parsed,priorReplies,others,before,rm){
 async function getReply(id,parsed,prior,others,before,rm){
   if(settings.provider==="demo"||!settings.apiKey) return demoReply(id,parsed);
   try{return await llmReply(id,parsed,prior,others,before,rm);}
-  catch(e){console.warn(e);return "⚠️ "+e.message+(e.busy?"":"\n(오류가 계속되면 ☰ 설정을 확인해 주세요)");}
+  catch(e){console.warn(e);return {error:e};}
 }
 
 /* ========== 7. 렌더링 ========== */
@@ -363,9 +372,17 @@ const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 
 function msgEl(m){
   const d=document.createElement("div");
-  if(m.from==="me"){d.className="row me";d.innerHTML=`<span class="time">${m.time}</span><div class="bubble">${esc(m.text)}</div>`;}
+  const q=m.replyTo?`<div class="quote"><b>↩ ${esc(m.replyTo.name)}에게 답장</b>${esc(m.replyTo.text.slice(0,60))}</div>`:"";
+  if(m.from==="me"){d.className="row me";d.innerHTML=`<span class="time">${m.time}</span><div class="bubble">${q}${esc(m.text)}</div>`;}
   else{const s=SAGES[m.from];d.className="row sage";
-    d.innerHTML=`<div class="avatar" style="background:${s.color}" data-id="${m.from}">${av(s)}</div><div class="body"><div class="name">${s.name}<span class="tag">${s.tag}</span></div><div style="display:flex;align-items:flex-end;gap:5px"><div class="bubble">${esc(m.text)}</div><span class="time">${m.time}</span></div></div>`;}
+    d.innerHTML=`<div class="avatar" style="background:${s.color}" data-id="${m.from}">${av(s)}</div><div class="body"><div class="name">${s.name}<span class="tag">${s.tag}</span></div><div style="display:flex;align-items:flex-end;gap:5px"><div class="bubble">${esc(m.text)}</div><span class="time">${m.time}</span></div></div>`;if(m.pid)d.classList.add("pending");}
+  // 길게 누르기(또는 우클릭) → 답장
+  const b=d.querySelector(".bubble");let lt;
+  const setR=()=>setReply(m);
+  b.addEventListener("touchstart",()=>{lt=setTimeout(setR,450);},{passive:true});
+  ["touchend","touchmove","touchcancel"].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(lt),{passive:true}));
+  b.addEventListener("contextmenu",e=>{e.preventDefault();setR();});
+  b.addEventListener("dblclick",setR);
   return d;
 }
 function render(){
@@ -395,30 +412,70 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ========== 8. 전송 ========== */
 let busy=false;
+let replyTo=null;
+function setReply(m){
+  if(m.pid) return;
+  replyTo={from:m.from,name:m.from==="me"?"나":SAGES[m.from].name,text:m.text.slice(0,200)};
+  $("#replyTxt").textContent=`↩ ${replyTo.name}에게 답장: ${replyTo.text}`;$("#replyBar").classList.add("show");$("#input").focus();
+  navigator.vibrate&&navigator.vibrate(20);
+}
+function clearReply(){replyTo=null;$("#replyBar").classList.remove("show");}
 async function send(){
   const text=$("#input").value.trim(); if(!text||busy) return;
   busy=true;$("#send").disabled=true;$("#input").value="";
-  const targetRoom=room;
+  const targetRoom=room,rt=replyTo;clearReply();
   const push=m=>{(histories[targetRoom] ||= []).push(m);save();if(room===targetRoom){chat.appendChild(msgEl(m));chat.scrollTop=chat.scrollHeight;}};
   const before=(histories[targetRoom]||[]).slice();
-  push({from:"me",text,time:now()});
-  const parsed=parseInput(text);
-  const sages=GROUPS[targetRoom]?GROUPS[targetRoom].pick(text):[targetRoom];
-  const others=GROUPS[targetRoom]?sages.map(i=>SAGES[i].name).join(", "):"";
+  push({from:"me",text,time:now(),...(rt?{replyTo:rt}:{})});
+  const parsed={...parseInput(text),replyTo:rt};
+  const G=GROUPS[targetRoom];
+  // 단톡방에서 특정 인물의 말에 답장하면 그 사람이 이어서 답함
+  const sages=G?(rt&&rt.from!=="me"&&G.members().includes(rt.from)?[rt.from]:G.pick(text)):[targetRoom];
+  const others=G&&sages.length>1?sages.map(i=>SAGES[i].name).join(", "):"";
   const prior=[];
   for(const id of sages){
     await sleep(400);
     const t=room===targetRoom?showTyping(id):null;
     const [reply]=await Promise.all([getReply(id,parsed,prior,others,before,targetRoom),sleep(900+Math.random()*900)]);
     t&&t.remove();
+    if(reply&&reply.error){
+      if(reply.error.busy){
+        const pid="p"+Date.now()+id;
+        push({from:id,text:"⚠️ 지금 서버가 붐벼서 5분 뒤에 다시 답할게요…",time:now(),pid});
+        addPending({pid,room:targetRoom,id,text,replyTo:rt,beforeLen:before.length,others,due:Date.now()+5*60*1000,tries:0});
+      } else push({from:id,text:"⚠️ "+reply.error.message+"\n(오류가 계속되면 ☰ 설정을 확인해 주세요)",time:now()});
+      continue;
+    }
     prior.push(`${SAGES[id].name}: ${reply}`);
     push({from:id,text:reply,time:now()});
   }
   busy=false;$("#send").disabled=false;$("#input").focus();
 }
+/* ===== 붐빔 오류 시 5분 뒤 자동 재답변 (앱을 닫았다 열어도 이어서 처리) ===== */
+let pending=JSON.parse(localStorage.getItem("sagetalk_pending")||"[]");
+const savePending=()=>localStorage.setItem("sagetalk_pending",JSON.stringify(pending));
+function addPending(p){pending.push(p);savePending();}
+let pendingBusy=false;
+async function processPending(){
+  if(pendingBusy) return; pendingBusy=true;
+  for(const p of pending.filter(x=>x.due<=Date.now())){
+    const h=histories[p.room]||[], m=h.find(x=>x.pid===p.pid);
+    if(!m){pending=pending.filter(x=>x!==p);continue;}
+    const before=h.slice(0,p.beforeLen).filter(x=>!x.pid);
+    const reply=await getReply(p.id,{...parseInput(p.text),replyTo:p.replyTo},[],p.others,before,p.room);
+    if(reply&&reply.error){
+      if(reply.error.busy&&++p.tries<3){p.due=Date.now()+5*60*1000;m.text=`⚠️ 아직 붐벼요. 5분 뒤 다시 시도할게요… (${p.tries+1}/3)`;}
+      else{m.text="⚠️ "+reply.error.message;delete m.pid;pending=pending.filter(x=>x!==p);}
+    } else {m.text=reply;m.time=now();delete m.pid;pending=pending.filter(x=>x!==p);}
+    save();savePending();if(room===p.room) render();
+  }
+  pendingBusy=false;
+}
+setInterval(processPending,20000);
 
 /* ========== 9. 이벤트 ========== */
 $("#send").onclick=send;
+$("#replyX").onclick=clearReply;
 $("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}});
 $("#modebar").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.add)return openCharForm();room=b.dataset.room;render();};
 $("#backBtn").onclick=()=>{room="group";render();};
@@ -482,6 +539,7 @@ $("#pwBtn").onclick=tryPw;
 $("#pw").addEventListener("keydown",e=>{if(e.key==="Enter")tryPw();});
 
 renderModebar();render();
+setTimeout(processPending,1500);
 </script>
 </body>
 </html>
