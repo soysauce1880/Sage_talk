@@ -478,7 +478,12 @@ async function sendInner(text){
       continue;
     }
     prior.push(`${SAGES[id].name}: ${reply}`);
-    push({from:id,text:reply,time:now()});
+    // 카톡처럼 말풍선을 하나씩 (빠르게) 보냄
+    const parts=String(reply).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    for(let i=0;i<parts.length;i++){
+      if(i){const t2=room===targetRoom?showTyping(id):null;await sleep(Math.min(900,250+parts[i].length*12));t2&&t2.remove();}
+      push({from:id,text:parts[i],time:now()});
+    }
   }
 }
 /* ===== 붐빔 오류 시 5분 뒤 자동 재답변 (앱을 닫았다 열어도 이어서 처리) ===== */
